@@ -4,6 +4,7 @@
   "main": "index.ts",
   "dependencies": {
     "expo": "~58.0.23",
+    "expo-secure-store": "^58.0.2",
     "expo-status-bar": "~58.0.4",
     "react": "19.3.0",
     "react-dom": "19.3.0",
@@ -18,7 +19,8 @@
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "test": "npx tsx src/features/auth/__tests__/loginViewModel.test.ts && npx tsx src/features/auth/__tests__/authIntegration.test.ts"
   },
   "private": true
 }

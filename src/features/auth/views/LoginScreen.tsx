@@ -9,11 +9,12 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { IAuthService } from '../models/types';
+import { ILoginService } from '../models/types';
 import { useLoginViewModel } from '../viewmodels/useLoginViewModel';
 
 export interface LoginScreenProps {
-  readonly authService?: IAuthService;
+  readonly authService?: ILoginService;
+  readonly onLoginExitoso?: () => void;
 }
 
 /**
@@ -21,7 +22,7 @@ export interface LoginScreenProps {
  * - SRP: Componente declarativo puro. Cero lógica de negocio, cero regex y cero normalización.
  * - Consume exclusivamente el estado y comandos expuestos por `useLoginViewModel`.
  */
-export const LoginScreen: React.FC<LoginScreenProps> = ({ authService }) => {
+export const LoginScreen: React.FC<LoginScreenProps> = ({ authService, onLoginExitoso }) => {
   const {
     correo,
     password,
@@ -32,7 +33,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ authService }) => {
     setPassword,
     toggleMostrarPassword,
     ejecutarLogin,
-  } = useLoginViewModel(authService);
+  } = useLoginViewModel(authService, onLoginExitoso);
 
   return (
     <KeyboardAvoidingView

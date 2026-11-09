@@ -1,13 +1,13 @@
 import { useCallback, useState } from 'react';
-import { IAuthService, LoginCredentials } from '../models/types';
+import { ILoginService, LoginCredentials } from '../models/types';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /**
- * Servicio por defecto para desarrollo e integración inicial con el endpoint de Diana.
- * Cumple el contrato IAuthService (DIP / LSP).
+ * Servicio por defecto para desarrollo o pruebas aisladas.
+ * Cumple el contrato ILoginService (DIP / LSP / ISP).
  */
-export const defaultAuthService: IAuthService = {
+export const defaultAuthService: ILoginService = {
   async login(credentials: LoginCredentials): Promise<void> {
     console.log('[AssetOps Auth] Payload listo para enviar a API:', credentials);
   },
@@ -26,12 +26,13 @@ export interface UseLoginViewModelReturn {
 }
 
 /**
- * Capa ViewModel (VM - Lógica de Presentación)
+ * Capa ViewModel (VM - Lógica de Presentación de Login)
  * - SRP: Gestiona exclusivamente estado de formulario, validaciones y ciclo de vida de envío.
- * - DIP: Depende de la abstracción `IAuthService` inyectada por parámetro.
+ * - DIP / ISP: Depende de la abstracción segregada `ILoginService` inyectada por parámetro.
  */
 export const useLoginViewModel = (
-  authService: IAuthService = defaultAuthService
+  authService: ILoginService = defaultAuthService,
+  onLoginExitoso?: () => void
 ): UseLoginViewModelReturn => {
   const [correo, setCorreoState] = useState<string>('');
   const [password, setPasswordState] = useState<string>('');
@@ -84,6 +85,7 @@ export const useLoginViewModel = (
     try {
       setCargando(true);
       await authService.login(payloadNormalizado);
+      onLoginExitoso?.();
     } catch (error: unknown) {
       const mensaje =
         error instanceof Error && error.message.trim().length > 0
@@ -93,7 +95,7 @@ export const useLoginViewModel = (
     } finally {
       setCargando(false);
     }
-  }, [authService, cargando, correo, password]);
+  }, [authService, cargando, correo, onLoginExitoso, password]);
 
   return {
     correo,
