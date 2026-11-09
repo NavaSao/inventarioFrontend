@@ -61,3 +61,4 @@ export async function ejecutarValidarSesionQuery(
     throw new NetworkError('Fallo de conexión. Reintentar');
   }
 }
+

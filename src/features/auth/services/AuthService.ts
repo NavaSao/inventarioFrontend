@@ -36,3 +36,4 @@ export class AuthService implements IAuthService {
     return this.secureStorage.obtenerToken();
   }
 }
+

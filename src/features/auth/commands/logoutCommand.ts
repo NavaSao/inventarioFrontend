@@ -7,3 +7,4 @@ import { ISecureStorage } from '../../../core/storage/ISecureStorage';
 export async function ejecutarLogoutCommand(secureStorage: ISecureStorage): Promise<void> {
   await secureStorage.eliminarToken();
 }
+

@@ -8,3 +8,4 @@ export interface ISecureStorage {
   obtenerToken(): Promise<string | null>;
   eliminarToken(): Promise<void>;
 }
+
