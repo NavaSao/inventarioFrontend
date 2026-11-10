@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import { NetworkError } from '../../../core/network/IHttpClient';
 import { ILoginService, LoginCredentials } from '../models/types';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -8,8 +9,8 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
  * Cumple el contrato ILoginService (DIP / LSP / ISP).
  */
 export const defaultAuthService: ILoginService = {
-  async login(credentials: LoginCredentials): Promise<void> {
-    console.log('[AssetOps Auth] Payload listo para enviar a API:', credentials);
+  async login(): Promise<void> {
+    // El formulario aislado puede simular el envío sin registrar credenciales.
   },
 };
 
@@ -19,6 +20,7 @@ export interface UseLoginViewModelReturn {
   readonly mostrarPassword: boolean;
   readonly cargando: boolean;
   readonly errorMensaje: string | null;
+  readonly puedeReintentar: boolean;
   readonly setCorreo: (valor: string) => void;
   readonly setPassword: (valor: string) => void;
   readonly toggleMostrarPassword: () => void;
@@ -38,16 +40,16 @@ export const useLoginViewModel = (
   const [password, setPasswordState] = useState<string>('');
   const [mostrarPassword, setMostrarPassword] = useState<boolean>(false);
   const [cargando, setCargando] = useState<boolean>(false);
-  const [errorMensaje, setErrorMensaje] = useState<string | null>(null);
+  const [errorLogin, setErrorLogin] = useState<Error | null>(null);
 
   const setCorreo = useCallback((valor: string): void => {
     setCorreoState(valor);
-    setErrorMensaje(null);
+    setErrorLogin(null);
   }, []);
 
   const setPassword = useCallback((valor: string): void => {
     setPasswordState(valor);
-    setErrorMensaje(null);
+    setErrorLogin(null);
   }, []);
 
   const toggleMostrarPassword = useCallback((): void => {
@@ -59,20 +61,20 @@ export const useLoginViewModel = (
       return;
     }
 
-    setErrorMensaje(null);
+    setErrorLogin(null);
 
     const correoLimpio = correo.trim();
     const passwordLimpia = password.trim();
 
     // Regla 1: Campos obligatorios
     if (!correoLimpio || !passwordLimpia) {
-      setErrorMensaje('Por favor ingresa tu correo y contraseña.');
+      setErrorLogin(new Error('Por favor ingresa tu correo y contraseña.'));
       return;
     }
 
     // Regla 2: Validación de formato de correo electrónico
     if (!EMAIL_REGEX.test(correoLimpio)) {
-      setErrorMensaje('Ingresa un formato de correo electrónico válido.');
+      setErrorLogin(new Error('Ingresa un formato de correo electrónico válido.'));
       return;
     }
 
@@ -87,11 +89,12 @@ export const useLoginViewModel = (
       await authService.login(payloadNormalizado);
       onLoginExitoso?.();
     } catch (error: unknown) {
-      const mensaje =
+      // Guardo el error original para ofrecer reintento cuando falla la conexión.
+      setErrorLogin(
         error instanceof Error && error.message.trim().length > 0
-          ? error.message
-          : 'Ocurrió un error al intentar iniciar sesión.';
-      setErrorMensaje(mensaje);
+          ? error
+          : new Error('Ocurrió un error al intentar iniciar sesión.')
+      );
     } finally {
       setCargando(false);
     }
@@ -102,7 +105,8 @@ export const useLoginViewModel = (
     password,
     mostrarPassword,
     cargando,
-    errorMensaje,
+    errorMensaje: errorLogin?.message ?? null,
+    puedeReintentar: errorLogin instanceof NetworkError,
     setCorreo,
     setPassword,
     toggleMostrarPassword,
