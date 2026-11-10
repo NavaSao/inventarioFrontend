@@ -2,7 +2,7 @@ import { HttpError, HttpResponse, IHttpClient, NetworkError } from '../../../cor
 import { ISecureStorage } from '../../../core/storage/ISecureStorage';
 import { ejecutarLoginCommand } from '../commands/loginCommand';
 import { ejecutarLogoutCommand } from '../commands/logoutCommand';
-import { LoginCredentials, SessionUser } from '../models/types';
+import { LoginCredentials } from '../models/types';
 import { ejecutarValidarSesionQuery } from '../queries/validarSesionQuery';
 import { AuthService } from '../services/AuthService';
 
@@ -107,7 +107,7 @@ export async function correrPruebasIntegracionAuth(): Promise<void> {
   }
 
   // ==========================================
-  // PRUEBA 3: LoginCommand - Error 401 (Acceso inválido)
+  // PRUEBA 3: LoginCommand - Error 401 (Credenciales incorrectas)
   // ==========================================
   {
     const storage = new MockSecureStorage();
@@ -127,8 +127,8 @@ export async function correrPruebasIntegracionAuth(): Promise<void> {
 
     assert(capturado !== null, 'Debe lanzar HttpError ante 401');
     assert(capturado?.status === 401, 'El status debe ser 401');
-    assert(capturado?.message === 'Acceso inválido', 'El mensaje debe coincidir');
-    console.log('✅ Prueba 3 (LoginCommand 401 Unauthorized): Rechaza con "Acceso inválido"');
+    assert(capturado?.message === 'Credenciales incorrectas', 'La app debe mostrar el mensaje de credenciales');
+    console.log('✅ Prueba 3 (LoginCommand 401): Muestra "Credenciales incorrectas"');
   }
 
   // ==========================================
@@ -205,7 +205,18 @@ export async function correrPruebasIntegracionAuth(): Promise<void> {
       tokenConservado === 'jwt-guardado-offline',
       'REGLA CRÍTICA: Ante error de red el token se CONSERVA en storage para reintentar'
     );
-    console.log('✅ Prueba 6 (ValidarSesionQuery Red Caída): Token CONSERVADO en storage y permite reintento');
+    // Cuando vuelve la conexión, reintento con el token que quedó guardado.
+    httpClient.getHandler = async (_url, headers) => {
+      assert(headers?.Authorization === 'Bearer jwt-guardado-offline', 'Debe reutilizar el token');
+      return {
+        status: 200,
+        ok: true,
+        data: { idUsuario: 'u-1', nombre: 'Test', correo: 'test@mail.com' },
+      };
+    };
+    const usuario = await ejecutarValidarSesionQuery(httpClient, storage, baseUrl);
+    assert(usuario?.idUsuario === 'u-1', 'Debe recuperar la sesión al reintentar');
+    console.log('✅ Prueba 6 (ValidarSesionQuery): Recupera la sesión cuando vuelve la conexión');
   }
 
   // ==========================================
@@ -251,6 +262,8 @@ export async function correrPruebasIntegracionAuth(): Promise<void> {
     await authService.logout();
     const tokenPostLogout = await authService.obtenerTokenActual();
     assert(tokenPostLogout === null, 'AuthService.logout debe limpiar el token');
+    const sesionAlReabrir = await authService.validarSesion();
+    assert(sesionAlReabrir === null, 'La app debe seguir sin sesión al volver a abrir');
     console.log('✅ Prueba 8 (AuthService Integrado): Flujo completo de orquestación verificado\n');
   }
 

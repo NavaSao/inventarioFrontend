@@ -19,10 +19,6 @@ export async function ejecutarPruebasDirectas(): Promise<void> {
   const mockAuthService: IAuthService = {
     async login(credentials: LoginCredentials): Promise<void> {
       ultimoPayloadRecibido = credentials;
-      console.log(
-        '[AssetOps Auth] Payload listo para enviar a API:',
-        credentials
-      );
     },
   };
 
@@ -81,9 +77,9 @@ export async function ejecutarPruebasDirectas(): Promise<void> {
     estadoVisibilidad.mostrarPassword === false,
     'Debería ocultar la contraseña "12345"'
   );
-  console.log('✅ Prueba 3 (Toggle mostrar/ocultar contraseña "12345"): PASÓ');
+  console.log('✅ Prueba 3 (Mostrar y ocultar contraseña): PASÓ');
 
-  // Prueba 4: Impresión limpia del payload normalizado con contraseña "12345"
+  // Prueba 4: Compruebo los datos normalizados sin imprimir las credenciales.
   const errorExito = await validarYDespachar('  DIANA.Admin@AssetOps.COM  ', '12345');
   verificar(errorExito === null, 'No debería retornar error con datos válidos');
   verificar(
@@ -92,7 +88,7 @@ export async function ejecutarPruebasDirectas(): Promise<void> {
       (ultimoPayloadRecibido as LoginCredentials).password === '12345',
     'El payload normalizado debe tener correo en minúsculas y password "12345"'
   );
-  console.log('✅ Prueba 4 (Payload normalizado con contraseña "12345"): PASÓ\n');
+  console.log('✅ Prueba 4 (Datos de acceso normalizados): PASÓ\n');
 }
 
 ejecutarPruebasDirectas();

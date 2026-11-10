@@ -29,6 +29,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ authService, onLoginEx
     mostrarPassword,
     cargando,
     errorMensaje,
+    puedeReintentar,
     setCorreo,
     setPassword,
     toggleMostrarPassword,
@@ -104,7 +105,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ authService, onLoginEx
           {cargando ? (
             <ActivityIndicator color="#FFFFFF" />
           ) : (
-            <Text style={styles.loginButtonText}>Iniciar Sesión</Text>
+            <Text style={styles.loginButtonText}>{puedeReintentar ? 'Reintentar' : 'Iniciar Sesión'}</Text>
           )}
         </TouchableOpacity>
       </View>

@@ -34,11 +34,8 @@ export async function ejecutarLoginCommand(
     }
 
     if (response.status === 401) {
-      const mensaje =
-        'mensaje' in (response.data as ApiErrorResponse)
-          ? (response.data as ApiErrorResponse).mensaje
-          : 'Acceso inválido';
-      throw new HttpError(401, mensaje || 'Acceso inválido', response.data);
+      // En el formulario mostramos el mismo mensaje para cualquier rechazo de credenciales.
+      throw new HttpError(401, 'Credenciales incorrectas', response.data);
     }
 
     // Otro código de error HTTP

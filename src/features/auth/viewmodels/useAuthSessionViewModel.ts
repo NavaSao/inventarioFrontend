@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { NetworkError } from '../../../core/network/IHttpClient';
-import { ISessionService, SessionState, SessionUser } from '../models/types';
+import { ISessionService, SessionState } from '../models/types';
 
 export interface UseAuthSessionViewModelReturn {
   readonly sessionState: SessionState;
@@ -18,38 +18,28 @@ export interface UseAuthSessionViewModelReturn {
 export const useAuthSessionViewModel = (authService: ISessionService): UseAuthSessionViewModelReturn => {
   const [sessionState, setSessionState] = useState<SessionState>({ status: 'cargando' });
 
-  const verificarSesion = useCallback(async (): Promise<void> => {
-    setSessionState({ status: 'cargando' });
-    try {
-      const usuario: SessionUser | null = await authService.validarSesion();
-      if (usuario) {
-        setSessionState({ status: 'autenticado', usuario });
-      } else {
-        setSessionState({ status: 'no_autenticado' });
-      }
-    } catch (error: unknown) {
-      if (error instanceof NetworkError) {
-        // Fallo de red: el token se conserva en storage y se permite reintentar
+  const verificarSesion = useCallback((): Promise<void> => {
+    return authService.validarSesion().then(
+      (usuario) => {
+        setSessionState(usuario ? { status: 'autenticado', usuario } : { status: 'no_autenticado' });
+      },
+      (error: unknown) => {
+        // Si la consulta falla, conservo el token para poder reintentar.
         setSessionState({
           status: 'fallo_conexion',
-          mensaje: error.message || 'Fallo de conexión. Reintentar',
+          mensaje: (error instanceof NetworkError && error.message) || 'Fallo de conexión. Reintentar',
         });
-        return;
       }
-
-      // Cualquier otro error inesperado muestra fallback
-      setSessionState({
-        status: 'fallo_conexion',
-        mensaje: 'Fallo de conexión. Reintentar',
-      });
-    }
+    );
   }, [authService]);
 
   useEffect(() => {
     void verificarSesion();
   }, [verificarSesion]);
 
-  const reintentarValidacion = useCallback(async (): Promise<void> => {
+  const volverAValidarSesion = useCallback(async (): Promise<void> => {
+    // Al reintentar o después de entrar, muestro la carga mientras confirmo la sesión.
+    setSessionState({ status: 'cargando' });
     await verificarSesion();
   }, [verificarSesion]);
 
@@ -61,14 +51,10 @@ export const useAuthSessionViewModel = (authService: ISessionService): UseAuthSe
     }
   }, [authService]);
 
-  const notificarLoginExitoso = useCallback(async (): Promise<void> => {
-    await verificarSesion();
-  }, [verificarSesion]);
-
   return {
     sessionState,
-    reintentarValidacion,
+    reintentarValidacion: volverAValidarSesion,
     cerrarSesion,
-    notificarLoginExitoso,
+    notificarLoginExitoso: volverAValidarSesion,
   };
 };
