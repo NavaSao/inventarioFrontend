@@ -1,6 +1,7 @@
 import { HttpError, IHttpClient, NetworkError } from '../../../core/network/IHttpClient';
 import { ISecureStorage } from '../../../core/storage/ISecureStorage';
-import { ApiErrorResponse, SessionUser } from '../models/types';
+import { leerRespuestaAuth } from '../models/respuestaAuth';
+import type { SessionUser } from '../models/types';
 
 /**
  * CQRS - Query de Validación de Sesión (Lectura / Consulta)
@@ -24,12 +25,16 @@ export async function ejecutarValidarSesionQuery(
   const url = `${baseUrl.replace(/\/$/, '')}/api/auth/session`;
 
   try {
-    const response = await httpClient.get<SessionUser | ApiErrorResponse>(url, {
+    const response = await httpClient.get<unknown>(url, {
       Authorization: `Bearer ${token}`,
     });
 
-    if (response.status === 200 && 'idUsuario' in (response.data as SessionUser)) {
-      return response.data as SessionUser;
+    const { datos, mensaje } = leerRespuestaAuth(response.data);
+    if (response.status === 200 && typeof datos === 'object' && datos !== null
+        && 'idUsuario' in datos && typeof datos.idUsuario === 'string'
+        && 'nombre' in datos && typeof datos.nombre === 'string'
+        && 'correo' in datos && typeof datos.correo === 'string') {
+      return { idUsuario: datos.idUsuario, nombre: datos.nombre, correo: datos.correo };
     }
 
     if (response.status === 401) {
@@ -41,9 +46,7 @@ export async function ejecutarValidarSesionQuery(
     // Cualquier otro status de error del servidor que no sea 401
     throw new HttpError(
       response.status,
-      'mensaje' in (response.data as ApiErrorResponse)
-        ? (response.data as ApiErrorResponse).mensaje
-        : 'Error al verificar sesión'
+      mensaje || 'Error al verificar sesión'
     );
   } catch (error: unknown) {
     // Si fue 401 capturado o manejado

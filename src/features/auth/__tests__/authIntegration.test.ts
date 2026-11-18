@@ -90,7 +90,7 @@ export async function correrPruebasIntegracionAuth(): Promise<void> {
     httpClient.postHandler = async () => ({
       status: 400,
       ok: false,
-      data: { mensaje: 'Revisa el correo y la contraseña' },
+      data: { status: 400, message: 'Revisa el correo y la contraseña', data: null },
     });
 
     let capturado: HttpError | null = null;
@@ -241,13 +241,16 @@ export async function correrPruebasIntegracionAuth(): Promise<void> {
     httpClient.postHandler = async () => ({
       status: 200,
       ok: true,
-      data: { token: 'token-orquestador' },
+      data: { status: 200, message: 'Inicio correcto', data: { token: 'token-orquestador' } },
     });
 
     httpClient.getHandler = async () => ({
       status: 200,
       ok: true,
-      data: { idUsuario: 'u-1', nombre: 'Test', correo: 'test@mail.com' },
+      data: {
+        status: 200, message: 'Sesión activa',
+        data: { idUsuario: 'u-1', nombre: 'Test', correo: 'test@mail.com' },
+      },
     });
 
     const authService = new AuthService(httpClient, storage, baseUrl);
