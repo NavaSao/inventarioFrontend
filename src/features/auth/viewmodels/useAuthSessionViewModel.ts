@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { NetworkError } from '../../../core/network/IHttpClient';
+import { HttpError, NetworkError } from '../../../core/network/IHttpClient';
 import { ISessionService, SessionState } from '../models/types';
 
 export interface UseAuthSessionViewModelReturn {
@@ -27,7 +27,8 @@ export const useAuthSessionViewModel = (authService: ISessionService): UseAuthSe
         // Si la consulta falla, conservo el token para poder reintentar.
         setSessionState({
           status: 'fallo_conexion',
-          mensaje: (error instanceof NetworkError && error.message) || 'Fallo de conexión. Reintentar',
+          mensaje: ((error instanceof HttpError || error instanceof NetworkError) && error.message)
+            || 'Fallo de conexión. Reintentar',
         });
       }
     );

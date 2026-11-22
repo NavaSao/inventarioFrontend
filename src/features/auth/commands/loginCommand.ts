@@ -1,6 +1,6 @@
 import { HttpError, IHttpClient, NetworkError } from '../../../core/network/IHttpClient';
 import { ISecureStorage } from '../../../core/storage/ISecureStorage';
-import { ApiErrorResponse, LoginCredentials, LoginResponse } from '../models/types';
+import type { ApiResponse, LoginCredentials, LoginResponse } from '../models/types';
 
 /**
  * CQRS - Command de Inicio de Sesión (Escritura / Mutación)
@@ -17,33 +17,24 @@ export async function ejecutarLoginCommand(
   const url = `${baseUrl.replace(/\/$/, '')}/api/auth/login`;
 
   try {
-    const response = await httpClient.post<LoginResponse | ApiErrorResponse>(url, credentials);
+    const { status, data: cuerpo } = await httpClient.post<ApiResponse<LoginResponse>>(url, credentials);
 
-    if (response.status === 200 && 'token' in (response.data as LoginResponse)) {
-      const { token } = response.data as LoginResponse;
+    const token = cuerpo?.status === 'success' ? cuerpo.data?.token : undefined;
+    if (status === 200 && typeof token === 'string' && token.length > 0) {
       await secureStorage.guardarToken(token);
       return token;
     }
 
-    if (response.status === 400) {
-      const mensaje =
-        'mensaje' in (response.data as ApiErrorResponse)
-          ? (response.data as ApiErrorResponse).mensaje
-          : 'Revisa el correo y la contraseña';
-      throw new HttpError(400, mensaje || 'Revisa el correo y la contraseña', response.data);
-    }
-
-    if (response.status === 401) {
+    if (status === 401) {
       // En el formulario mostramos el mismo mensaje para cualquier rechazo de credenciales.
-      throw new HttpError(401, 'Credenciales incorrectas', response.data);
+      throw new HttpError(401, 'Credenciales incorrectas', cuerpo);
     }
 
-    // Otro código de error HTTP
-    const mensajeError =
-      'mensaje' in (response.data as ApiErrorResponse)
-        ? (response.data as ApiErrorResponse).mensaje
-        : 'No se pudo procesar la solicitud';
-    throw new HttpError(response.status, mensajeError || 'No se pudo procesar la solicitud', response.data);
+    const mensaje = cuerpo?.status === 'error' ? cuerpo.message : undefined;
+    const mensajePredeterminado = status === 400
+      ? 'Revisa el correo y la contraseña'
+      : 'No se pudo procesar la solicitud';
+    throw new HttpError(status, mensaje || mensajePredeterminado, cuerpo);
   } catch (error: unknown) {
     if (error instanceof HttpError || error instanceof NetworkError) {
       throw error;

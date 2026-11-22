@@ -1,6 +1,6 @@
 import { HttpError, IHttpClient, NetworkError } from '../../../core/network/IHttpClient';
 import { ISecureStorage } from '../../../core/storage/ISecureStorage';
-import { ApiErrorResponse, SessionUser } from '../models/types';
+import type { ApiResponse, SessionUser } from '../models/types';
 
 /**
  * CQRS - Query de Validación de Sesión (Lectura / Consulta)
@@ -24,36 +24,26 @@ export async function ejecutarValidarSesionQuery(
   const url = `${baseUrl.replace(/\/$/, '')}/api/auth/session`;
 
   try {
-    const response = await httpClient.get<SessionUser | ApiErrorResponse>(url, {
+    const { status, data: cuerpo } = await httpClient.get<ApiResponse<SessionUser>>(url, {
       Authorization: `Bearer ${token}`,
     });
 
-    if (response.status === 200 && 'idUsuario' in (response.data as SessionUser)) {
-      return response.data as SessionUser;
+    const usuario = cuerpo?.status === 'success' ? cuerpo.data : undefined;
+    if (status === 200 && typeof usuario?.idUsuario === 'string') {
+      return usuario;
     }
 
-    if (response.status === 401) {
-      // Token rechazado o expirado: se destruye de storage
-      await secureStorage.eliminarToken();
-      return null;
-    }
-
-    // Cualquier otro status de error del servidor que no sea 401
-    throw new HttpError(
-      response.status,
-      'mensaje' in (response.data as ApiErrorResponse)
-        ? (response.data as ApiErrorResponse).mensaje
-        : 'Error al verificar sesión'
-    );
+    const mensaje = cuerpo?.status === 'error' ? cuerpo.message : undefined;
+    throw new HttpError(status, mensaje || 'Error al verificar sesión', cuerpo);
   } catch (error: unknown) {
-    // Si fue 401 capturado o manejado
+    // Si el servidor rechazó el token, borro el acceso guardado.
     if (error instanceof HttpError && error.status === 401) {
       await secureStorage.eliminarToken();
       return null;
     }
 
-    // Si es un error de red o timeout, NUNCA borramos el token
-    if (error instanceof NetworkError) {
+    // Con otros errores conservo el token para poder reintentar.
+    if (error instanceof HttpError || error instanceof NetworkError) {
       throw error;
     }
 
