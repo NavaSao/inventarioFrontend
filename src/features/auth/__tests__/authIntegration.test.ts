@@ -53,6 +53,7 @@ export async function correrPruebasIntegracionAuth(): Promise<void> {
   console.log('=== INICIANDO PRUEBAS UNITARIAS DE CQRS Y SERVICIOS AUTH ===\n');
 
   const baseUrl = 'http://127.0.0.1:3000';
+  const usuarioDePrueba = { idUsuario: 'u-1', nombre: 'Test', correo: 'test@mail.com' };
 
   // ==========================================
   // PRUEBA 1: LoginCommand - Éxito 200
@@ -60,12 +61,16 @@ export async function correrPruebasIntegracionAuth(): Promise<void> {
   {
     const storage = new MockSecureStorage();
     const httpClient = new MockHttpClient();
-    httpClient.postHandler = async (url, body) => {
+    httpClient.postHandler = async (url) => {
       assert(url.includes('/api/auth/login'), 'URL incorrecta para login');
       return {
         status: 200,
         ok: true,
-        data: { token: 'jwt-token-valido-123' },
+        data: {
+          status: 'success',
+          message: 'Inicio de sesión exitoso',
+          data: { token: 'jwt-token-valido-123', user: usuarioDePrueba },
+        },
       };
     };
 
@@ -90,7 +95,7 @@ export async function correrPruebasIntegracionAuth(): Promise<void> {
     httpClient.postHandler = async () => ({
       status: 400,
       ok: false,
-      data: { mensaje: 'Revisa el correo y la contraseña' },
+      data: { status: 'error', message: 'Datos de inicio de sesión inválidos' },
     });
 
     let capturado: HttpError | null = null;
@@ -102,7 +107,7 @@ export async function correrPruebasIntegracionAuth(): Promise<void> {
 
     assert(capturado !== null, 'Debe lanzar HttpError ante 400');
     assert(capturado?.status === 400, 'El status debe ser 400');
-    assert(capturado?.message === 'Revisa el correo y la contraseña', 'El mensaje debe coincidir');
+    assert(capturado?.message === 'Datos de inicio de sesión inválidos', 'El mensaje debe coincidir');
     console.log('✅ Prueba 2 (LoginCommand 400 Bad Request): Rechaza y mapea mensaje esperado');
   }
 
@@ -115,7 +120,7 @@ export async function correrPruebasIntegracionAuth(): Promise<void> {
     httpClient.postHandler = async () => ({
       status: 401,
       ok: false,
-      data: { mensaje: 'Acceso inválido' },
+      data: { status: 'error', message: 'Credenciales inválidas o cuenta deshabilitada' },
     });
 
     let capturado: HttpError | null = null;
@@ -140,14 +145,15 @@ export async function correrPruebasIntegracionAuth(): Promise<void> {
     const httpClient = new MockHttpClient();
 
     httpClient.getHandler = async (url, headers) => {
+      assert(url.endsWith('/api/auth/session'), 'URL incorrecta para consultar sesión');
       assert(headers?.Authorization === 'Bearer jwt-existente', 'Debe incluir header Authorization Bearer');
       return {
         status: 200,
         ok: true,
         data: {
-          idUsuario: 'user-001',
-          nombre: 'Diana Administradora',
-          correo: 'diana@assetops.com',
+          status: 'success',
+          message: 'Sesión activa verificada',
+          data: { idUsuario: 'user-001', nombre: 'Diana Administradora', correo: 'diana@assetops.com' },
         },
       };
     };
@@ -170,7 +176,7 @@ export async function correrPruebasIntegracionAuth(): Promise<void> {
     httpClient.getHandler = async () => ({
       status: 401,
       ok: false,
-      data: { mensaje: 'Sesión expirada' },
+      data: { status: 'error', message: 'Sesión expirada' },
     });
 
     const usuario = await ejecutarValidarSesionQuery(httpClient, storage, baseUrl);
@@ -211,7 +217,7 @@ export async function correrPruebasIntegracionAuth(): Promise<void> {
       return {
         status: 200,
         ok: true,
-        data: { idUsuario: 'u-1', nombre: 'Test', correo: 'test@mail.com' },
+        data: { status: 'success', message: 'Sesión activa verificada', data: usuarioDePrueba },
       };
     };
     const usuario = await ejecutarValidarSesionQuery(httpClient, storage, baseUrl);
@@ -241,13 +247,17 @@ export async function correrPruebasIntegracionAuth(): Promise<void> {
     httpClient.postHandler = async () => ({
       status: 200,
       ok: true,
-      data: { token: 'token-orquestador' },
+      data: {
+        status: 'success',
+        message: 'Inicio de sesión exitoso',
+        data: { token: 'token-orquestador', user: usuarioDePrueba },
+      },
     });
 
     httpClient.getHandler = async () => ({
       status: 200,
       ok: true,
-      data: { idUsuario: 'u-1', nombre: 'Test', correo: 'test@mail.com' },
+      data: { status: 'success', message: 'Sesión activa verificada', data: usuarioDePrueba },
     });
 
     const authService = new AuthService(httpClient, storage, baseUrl);
@@ -265,6 +275,29 @@ export async function correrPruebasIntegracionAuth(): Promise<void> {
     const sesionAlReabrir = await authService.validarSesion();
     assert(sesionAlReabrir === null, 'La app debe seguir sin sesión al volver a abrir');
     console.log('✅ Prueba 8 (AuthService Integrado): Flujo completo de orquestación verificado\n');
+  }
+
+  // PRUEBA 9: La API respondió con error; el token sigue disponible para reintentar.
+  {
+    const storage = new MockSecureStorage();
+    await storage.guardarToken('jwt-activo');
+    const httpClient = new MockHttpClient();
+    httpClient.getHandler = async () => ({
+      status: 500,
+      ok: false,
+      data: { status: 'error', message: 'Error interno del servidor' },
+    });
+
+    let capturado: HttpError | null = null;
+    try {
+      await ejecutarValidarSesionQuery(httpClient, storage, baseUrl);
+    } catch (error) {
+      if (error instanceof HttpError) capturado = error;
+    }
+    assert(capturado?.status === 500, 'La falla de la API debe conservar el código HTTP');
+    assert(capturado?.message === 'Error interno del servidor', 'Debe conservar el mensaje de la API');
+    assert(await storage.obtenerToken() === 'jwt-activo', 'El token debe conservarse');
+    console.log('✅ Prueba 9 (ValidarSesionQuery 500): Conserva el mensaje de la API y el token');
   }
 
   console.log('🎉 TODAS LAS PRUEBAS UNITARIAS DE CQRS, SOLID Y CASOS DE USO PASARON AL 100%');

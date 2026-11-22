@@ -11,6 +11,7 @@ export interface LoginCredentials {
 
 export interface LoginResponse {
   readonly token: string;
+  readonly user: SessionUser;
 }
 
 export interface SessionUser {
@@ -20,8 +21,15 @@ export interface SessionUser {
 }
 
 export interface ApiErrorResponse {
-  readonly mensaje: string;
+  readonly status: 'error';
+  readonly message: string;
 }
+
+export type ApiResponse<T> = ApiErrorResponse | {
+  readonly status: 'success';
+  readonly message: string;
+  readonly data: T;
+};
 
 export type SessionState =
   | { readonly status: 'cargando' }
