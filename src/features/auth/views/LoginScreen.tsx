@@ -1,15 +1,24 @@
-import React from 'react';
+import React, { useRef, useState } from 'react';
+import { useFonts } from 'expo-font';
+import { Inter_400Regular } from '@expo-google-fonts/inter/400Regular';
+import { Inter_600SemiBold } from '@expo-google-fonts/inter/600SemiBold';
+import { Inter_700Bold } from '@expo-google-fonts/inter/700Bold';
 import {
   ActivityIndicator,
+  Image,
   KeyboardAvoidingView,
+  Linking,
+  Modal,
   Platform,
+  ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
-import { ILoginService } from '../models/types';
+import type { ILoginService } from '../models/types';
 import { useLoginViewModel } from '../viewmodels/useLoginViewModel';
 
 export interface LoginScreenProps {
@@ -17,12 +26,32 @@ export interface LoginScreenProps {
   readonly onLoginExitoso?: () => void;
 }
 
-/**
- * Capa View (V - Interfaz de Usuario)
- * - SRP: Componente declarativo puro. Cero lógica de negocio, cero regex y cero normalización.
- * - Consume exclusivamente el estado y comandos expuestos por `useLoginViewModel`.
- */
+const marca = require('../../../../assets/login/marca.png');
+const ojo = require('../../../../assets/login/ojo.png');
+const flecha = require('../../../../assets/login/flecha.png');
+const escudo = require('../../../../assets/login/escudo.png');
+const fuentes = { Inter_400Regular, Inter_600SemiBold, Inter_700Bold };
+
+export const loginBackgroundColor = '#F6F8F6';
+const colores = {
+  marca: '#0F382A',
+  accion: '#107C41',
+  menta: '#D1FAE5',
+  blanco: '#FFFFFF',
+  secundario: '#61746A',
+  borde: '#D9E3DC',
+  error: '#9C2E24',
+  fondoError: '#FDECE9',
+};
+
 export const LoginScreen: React.FC<LoginScreenProps> = ({ authService, onLoginExitoso }) => {
+  const [fuentesListas] = useFonts(fuentes);
+  const [ayudaVisible, setAyudaVisible] = useState(false);
+  const inputPassword = useRef<React.ComponentRef<typeof TextInput>>(null);
+  const correoTi = process.env.EXPO_PUBLIC_TI_EMAIL?.trim();
+  const regular = fuentesListas && styles.interRegular;
+  const semibold = fuentesListas ? styles.interSemibold : styles.semibold;
+  const bold = fuentesListas ? styles.interBold : styles.bold;
   const {
     correo,
     password,
@@ -37,78 +66,158 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ authService, onLoginEx
   } = useLoginViewModel(authService, onLoginExitoso);
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <View style={styles.card}>
-        <View style={styles.header}>
-          <Text style={styles.title}>AssetOps</Text>
-          <Text style={styles.subtitle}>Control de Inventario y Activos</Text>
-        </View>
-
-        {errorMensaje && (
-          <View style={styles.errorBanner} accessibilityRole="alert">
-            <Text style={styles.errorText}>{errorMensaje}</Text>
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+        <View style={styles.content}>
+          <View style={styles.brandRow}>
+            <Image source={marca} style={styles.brandIcon} />
+            <Text style={[styles.brandName, bold]}>AssetOps</Text>
           </View>
-        )}
 
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Correo Electrónico</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="usuario@empresa.com"
-            placeholderTextColor="#64748B"
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoCorrect={false}
-            editable={!cargando}
-            value={correo}
-            onChangeText={setCorreo}
-          />
-        </View>
+          <View style={styles.rolePill}>
+            <Text style={[styles.roleText, bold]}>ADMINISTRADOR</Text>
+          </View>
 
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Contraseña</Text>
-          <View style={styles.passwordContainer}>
+          <Text accessibilityRole="header" style={[styles.title, bold]}>
+            {'Bienvenido\nde nuevo.'}
+          </Text>
+          <Text style={[styles.description, regular]}>
+            Todo en un solo lugar. Administra licencias y sus asignaciones a tus empleados desde donde estés.
+          </Text>
+
+          <View style={styles.form}>
+            {errorMensaje && (
+              <View style={styles.errorBanner} accessibilityRole="alert" accessibilityLiveRegion="polite">
+                <Text style={[styles.errorText, regular]}>{errorMensaje}</Text>
+              </View>
+            )}
+
+            <Text style={[styles.label, semibold]}>Correo electrónico</Text>
             <TextInput
-              style={styles.passwordInput}
-              placeholder="••••••••"
-              placeholderTextColor="#64748B"
-              secureTextEntry={!mostrarPassword}
+              accessibilityLabel="Correo electrónico"
+              style={[styles.input, regular]}
+              placeholder="admin@empresa.com"
+              placeholderTextColor={colores.secundario}
+              autoComplete="email"
               autoCapitalize="none"
               autoCorrect={false}
+              keyboardType="email-address"
+              returnKeyType="next"
+              submitBehavior="submit"
+              onSubmitEditing={() => inputPassword.current?.focus()}
               editable={!cargando}
-              value={password}
-              onChangeText={setPassword}
+              value={correo}
+              onChangeText={setCorreo}
             />
+
+            <Text style={[styles.label, styles.passwordLabel, semibold]}>Contraseña</Text>
+            <View style={styles.passwordGroup}>
+              <TextInput
+                ref={inputPassword}
+                accessibilityLabel="Contraseña"
+                style={[styles.passwordInput, regular]}
+                placeholder="••••••••••••"
+                placeholderTextColor={colores.secundario}
+                autoComplete="current-password"
+                secureTextEntry={!mostrarPassword}
+                autoCapitalize="none"
+                autoCorrect={false}
+                returnKeyType="go"
+                onSubmitEditing={ejecutarLogin}
+                editable={!cargando}
+                value={password}
+                onChangeText={setPassword}
+              />
+              <TouchableOpacity
+                accessibilityRole="button"
+                accessibilityLabel={mostrarPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                style={styles.passwordToggle}
+                onPress={toggleMostrarPassword}
+                disabled={cargando}
+              >
+                <Image source={ojo} style={styles.eyeIcon} />
+                {mostrarPassword && <View style={styles.eyeStrike} />}
+              </TouchableOpacity>
+            </View>
+
             <TouchableOpacity
-              style={styles.toggleButton}
-              onPress={toggleMostrarPassword}
-              disabled={cargando}
               accessibilityRole="button"
+              onPress={() => setAyudaVisible(true)}
+              style={styles.forgotButton}
             >
-              <Text style={styles.toggleText}>
-                {mostrarPassword ? 'Ocultar' : 'Mostrar'}
+              <Text style={[styles.helpLink, semibold]}>¿Olvidaste tu contraseña?</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.loginButton, cargando && styles.loginButtonDisabled]}
+              onPress={ejecutarLogin}
+              disabled={cargando}
+              activeOpacity={0.85}
+              accessibilityRole="button"
+              accessibilityState={{ busy: cargando, disabled: cargando }}
+            >
+              {cargando ? <ActivityIndicator color={colores.blanco} /> : (
+                <>
+                  <Text style={[styles.loginButtonText, bold]}>
+                    {puedeReintentar ? 'Reintentar' : 'Iniciar sesión'}
+                  </Text>
+                  <Image source={flecha} style={styles.arrowIcon} />
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.secureRow}>
+            <Image source={escudo} style={styles.securityIcon} />
+            <Text style={[styles.secureText, regular]}>Acceso seguro para administradores</Text>
+          </View>
+          <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel="Contacta con TI"
+            onPress={() => setAyudaVisible(true)}
+            style={styles.contactButton}
+          >
+            <Text style={[styles.contactText, regular]}>¿Necesitas acceso? Contacta con TI.</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+
+      <Modal
+        transparent
+        animationType="fade"
+        visible={ayudaVisible}
+        onRequestClose={() => setAyudaVisible(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard} accessibilityViewIsModal>
+            <Text accessibilityRole="header" style={[styles.modalTitle, bold]}>Contacta con TI</Text>
+            <Text style={[styles.modalText, regular]}>
+              Tu equipo de TI puede ayudarte a recuperar la contraseña o confirmar tu acceso.
+            </Text>
+            {correoTi && (
+              <Text
+                style={[styles.helpLink, styles.modalEmail, semibold]}
+                accessibilityRole="link"
+                selectable
+                onPress={() => {
+                  void Linking.openURL(`mailto:${correoTi}`).catch(() => {
+                    // El correo queda visible para copiarlo si el teléfono no tiene un cliente configurado.
+                  });
+                }}
+              >
+                {correoTi}
               </Text>
+            )}
+            <TouchableOpacity
+              accessibilityRole="button"
+              style={styles.modalClose}
+              onPress={() => setAyudaVisible(false)}
+            >
+              <Text style={[styles.loginButtonText, bold]}>Cerrar</Text>
             </TouchableOpacity>
           </View>
         </View>
-
-        <TouchableOpacity
-          style={[styles.loginButton, cargando && styles.loginButtonDisabled]}
-          onPress={ejecutarLogin}
-          disabled={cargando}
-          activeOpacity={0.85}
-          accessibilityRole="button"
-        >
-          {cargando ? (
-            <ActivityIndicator color="#FFFFFF" />
-          ) : (
-            <Text style={styles.loginButtonText}>{puedeReintentar ? 'Reintentar' : 'Iniciar Sesión'}</Text>
-          )}
-        </TouchableOpacity>
-      </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 };
@@ -118,109 +227,141 @@ export default LoginScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0F172A', // Slate 900
-    justifyContent: 'center',
-    paddingHorizontal: 24,
+    backgroundColor: loginBackgroundColor,
   },
-  card: {
-    backgroundColor: '#1E293B', // Slate 800
-    borderRadius: 16,
-    padding: 24,
-    borderWidth: 1,
-    borderColor: '#334155', // Slate 700
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.35,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  header: {
-    marginBottom: 24,
+  scrollContent: {
+    flexGrow: 1,
     alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingTop: Platform.select({
+      web: 74,
+      android: (StatusBar.currentHeight ?? 24) + 28,
+      default: 28,
+    }),
+    paddingBottom: 24,
   },
-  title: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#F8FAFC', // Slate 50
-    letterSpacing: 0.5,
+  content: { width: '100%', maxWidth: 400 },
+  interRegular: { fontFamily: 'Inter_400Regular' },
+  interSemibold: { fontFamily: 'Inter_600SemiBold' },
+  interBold: { fontFamily: 'Inter_700Bold' },
+  semibold: { fontWeight: '600' },
+  bold: { fontWeight: '700' },
+  brandRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  brandIcon: { width: 36, height: 36 },
+  brandName: { fontSize: 24, lineHeight: 30, color: colores.marca },
+  rolePill: {
+    alignSelf: 'flex-start',
+    minWidth: 146,
+    minHeight: 26,
+    justifyContent: 'center',
+    marginTop: 28,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    backgroundColor: colores.menta,
   },
-  subtitle: {
-    fontSize: 14,
-    color: '#94A3B8', // Slate 400
-    marginTop: 4,
-  },
+  roleText: { color: colores.marca, fontSize: 10, lineHeight: 14 },
+  title: { marginTop: 21, color: colores.marca, fontSize: 36, lineHeight: 42 },
+  description: { marginTop: 19, color: colores.secundario, fontSize: 15, lineHeight: 23 },
+  form: { marginTop: 28 },
   errorBanner: {
-    backgroundColor: 'rgba(239, 68, 68, 0.15)',
-    borderLeftWidth: 4,
-    borderLeftColor: '#EF4444', // Red 500
+    backgroundColor: colores.fondoError,
+    borderRadius: 12,
     padding: 12,
-    borderRadius: 8,
     marginBottom: 16,
   },
-  errorText: {
-    color: '#FCA5A5', // Red 300
-    fontSize: 13,
-    fontWeight: '500',
-  },
-  inputGroup: {
-    marginBottom: 18,
-  },
-  label: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#CBD5E1', // Slate 300
-    marginBottom: 8,
-  },
+  errorText: { color: colores.error, fontSize: 14, lineHeight: 20 },
+  label: { color: colores.marca, fontSize: 13, lineHeight: 18, marginBottom: 10 },
   input: {
-    backgroundColor: '#0F172A', // Slate 900
+    minHeight: 56,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#334155', // Slate 700
-    borderRadius: 10,
-    paddingHorizontal: 14,
+    borderColor: colores.borde,
+    backgroundColor: colores.blanco,
+    paddingHorizontal: 15,
     paddingVertical: 12,
-    fontSize: 15,
-    color: '#F8FAFC',
+    color: colores.marca,
+    fontSize: 14,
   },
-  passwordContainer: {
+  passwordLabel: { marginTop: 21 },
+  passwordGroup: {
+    minHeight: 56,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#0F172A',
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#334155',
-    borderRadius: 10,
+    borderColor: colores.borde,
+    backgroundColor: colores.blanco,
   },
   passwordInput: {
     flex: 1,
-    paddingHorizontal: 14,
+    minHeight: 54,
+    paddingHorizontal: 15,
     paddingVertical: 12,
-    fontSize: 15,
-    color: '#F8FAFC',
+    color: colores.marca,
+    fontSize: 14,
   },
-  toggleButton: {
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-  },
-  toggleText: {
-    color: '#38BDF8', // Sky 400
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  loginButton: {
-    backgroundColor: '#2563EB', // Blue 600
-    borderRadius: 10,
-    paddingVertical: 14,
-    alignItems: 'center',
+  passwordToggle: {
+    width: 54,
+    minHeight: 52,
     justifyContent: 'center',
-    marginTop: 8,
-    minHeight: 50,
+    alignItems: 'center',
   },
-  loginButtonDisabled: {
-    backgroundColor: '#1E40AF',
-    opacity: 0.7,
+  eyeIcon: { width: 22, height: 22 },
+  eyeStrike: {
+    position: 'absolute',
+    width: 21,
+    height: 2,
+    backgroundColor: colores.secundario,
+    transform: [{ rotate: '-45deg' }],
   },
-  loginButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
+  forgotButton: { alignSelf: 'flex-end', minHeight: 44, justifyContent: 'center' },
+  helpLink: { color: colores.accion, fontSize: 13, lineHeight: 18 },
+  loginButton: {
+    minHeight: 52,
+    marginTop: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 48,
+    borderRadius: 16,
+    backgroundColor: colores.accion,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loginButtonDisabled: { opacity: 0.7 },
+  loginButtonText: { textAlign: 'center', fontSize: 14, lineHeight: 20, color: colores.blanco },
+  arrowIcon: { position: 'absolute', right: 22, width: 20, height: 20 },
+  secureRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 28,
+  },
+  securityIcon: { width: 20, height: 20 },
+  secureText: { color: colores.secundario, fontSize: 11, lineHeight: 16 },
+  contactButton: { minHeight: 44, marginTop: 18, justifyContent: 'center', alignItems: 'center' },
+  contactText: { color: colores.secundario, fontSize: 12, lineHeight: 18, textAlign: 'center' },
+  modalBackdrop: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    backgroundColor: 'rgba(15, 56, 42, 0.35)',
+  },
+  modalCard: {
+    width: '100%',
+    maxWidth: 400,
+    borderRadius: 20,
+    padding: 24,
+    backgroundColor: colores.blanco,
+  },
+  modalTitle: { color: colores.marca, fontSize: 22, lineHeight: 28 },
+  modalText: { marginTop: 10, color: colores.secundario, fontSize: 15, lineHeight: 22 },
+  modalEmail: { marginTop: 12 },
+  modalClose: {
+    minHeight: 44,
+    marginTop: 20,
+    justifyContent: 'center',
+    borderRadius: 12,
+    backgroundColor: colores.accion,
   },
 });
