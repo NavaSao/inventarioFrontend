@@ -14,7 +14,7 @@ import { FetchHttpClient } from './src/core/network/FetchHttpClient';
 import { ExpoSecureStorage } from './src/core/storage/ExpoSecureStorage';
 import { AuthService } from './src/features/auth/services/AuthService';
 import { useAuthSessionViewModel } from './src/features/auth/viewmodels/useAuthSessionViewModel';
-import { LoginScreen } from './src/features/auth/views/LoginScreen';
+import { LoginScreen, loginBackgroundColor } from './src/features/auth/views/LoginScreen';
 import { HomeScreen } from './src/features/home/views/HomeScreen';
 
 /**
@@ -34,10 +34,11 @@ export default function App() {
 
   const { sessionState, reintentarValidacion, cerrarSesion, notificarLoginExitoso } =
     useAuthSessionViewModel(authService);
+  const mostrandoLogin = sessionState.status === 'no_autenticado';
 
   return (
-    <SafeAreaView style={styles.rootContainer}>
-      <StatusBar style="light" />
+    <SafeAreaView style={[styles.rootContainer, mostrandoLogin && styles.loginRoot]}>
+      <StatusBar style={mostrandoLogin ? 'dark' : 'light'} />
 
       {sessionState.status === 'cargando' && (
         <View style={styles.centerContainer}>
@@ -80,7 +81,7 @@ export default function App() {
         <HomeScreen usuario={sessionState.usuario} onCerrarSesion={cerrarSesion} />
       )}
 
-      {sessionState.status === 'no_autenticado' && (
+      {mostrandoLogin && (
         <LoginScreen authService={authService} onLoginExitoso={notificarLoginExitoso} />
       )}
     </SafeAreaView>
@@ -92,6 +93,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#0F172A', // Slate 900
   },
+  loginRoot: { backgroundColor: loginBackgroundColor },
   centerContainer: {
     flex: 1,
     backgroundColor: '#0F172A',
