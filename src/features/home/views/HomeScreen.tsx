@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
+  BackHandler,
   SafeAreaView,
   StyleSheet,
   Text,
@@ -11,8 +12,19 @@ import { DashboardScreen } from '../../dashboard/views/DashboardScreen';
 import { DashboardService } from '../../dashboard/services/DashboardService';
 import { LicenciasScreen } from '../../licencias/views/LicenciasScreen';
 import { LicenciasService } from '../../licencias/services/LicenciasService';
+import { LicenciaDetalleScreen } from '../../licencias/views/LicenciaDetalleScreen';
+import { EmpleadosAsignadosScreen } from '../../licencias/views/EmpleadosAsignadosScreen';
+import { AsignarLicenciaScreen } from '../../asignaciones/views/AsignarLicenciaScreen';
+import { LiberarCupoButton } from '../../asignaciones/views/LiberarCupoButton';
 import { BottomBar, PestanaNavegacion } from '../../navigation/BottomBar';
 import { UsersIcon } from '../../../shared/components/Icons';
+
+/** Pila de navegación dentro de la pestaña Licencias. */
+export type VistaLicencias =
+  | { readonly tipo: 'catalogo' }
+  | { readonly tipo: 'detalle'; readonly id: string; readonly aviso?: string }
+  | { readonly tipo: 'asignados'; readonly id: string }
+  | { readonly tipo: 'asignar'; readonly id: string };
 
 export interface HomeScreenProps {
   readonly usuario: SessionUser;
@@ -34,6 +46,25 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 }) => {
   const [pestanaActiva, setPestanaActiva] = useState<PestanaNavegacion>('inicio');
   const [licenciaIdSeleccionada, setLicenciaIdSeleccionada] = useState<string | undefined>(undefined);
+  const [vista, setVista] = useState<VistaLicencias>({ tipo: 'catalogo' });
+
+  const volver = (): boolean => {
+    if (pestanaActiva !== 'licencias' || vista.tipo === 'catalogo') return false;
+    setVista(vista.tipo === 'detalle' ? { tipo: 'catalogo' } : { tipo: 'detalle', id: vista.id });
+    return true;
+  };
+
+  // Botón físico «atrás» de Android regresa dentro del flujo de licencias.
+  useEffect(() => {
+    const sub = BackHandler.addEventListener('hardwareBackPress', volver);
+    return () => sub.remove();
+  });
+
+  const seleccionarPestana = (p: PestanaNavegacion) => {
+    setVista({ tipo: 'catalogo' });
+    setLicenciaIdSeleccionada(undefined);
+    setPestanaActiva(p);
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -45,23 +76,67 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             nombreUsuario={usuario.nombre}
             onNavegarLicencias={() => {
               setLicenciaIdSeleccionada(undefined);
+              setVista({ tipo: 'catalogo' });
               setPestanaActiva('licencias');
             }}
             onRevisarLicencia={(licenciaId, software) => {
-              // Enlace al detalle de licencias (PR 9 de Hugo)
-              setLicenciaIdSeleccionada(software || licenciaId);
+              // «Revisar licencia» abre directo la ficha de detalle (HU08 · Escenario 08.02).
+              if (licenciaId) {
+                setVista({ tipo: 'detalle', id: licenciaId });
+              } else {
+                setVista({ tipo: 'catalogo' });
+                setLicenciaIdSeleccionada(software);
+              }
               setPestanaActiva('licencias');
             }}
           />
         )}
 
-        {pestanaActiva === 'licencias' && (
+        {pestanaActiva === 'licencias' && vista.tipo === 'catalogo' && (
           <LicenciasScreen
             licenciasService={licenciasService}
             licenciaIdInicial={licenciaIdSeleccionada}
-            onSeleccionarLicencia={(_licencia) => {
-              // Punto de conexión para Detalle de Licencia (PR 9 de Hugo - HU05)
+            onSeleccionarLicencia={(licencia) => {
+              setLicenciaIdSeleccionada(undefined);
+              setVista({ tipo: 'detalle', id: licencia.id });
             }}
+          />
+        )}
+
+        {pestanaActiva === 'licencias' && vista.tipo === 'detalle' && (
+          <LicenciaDetalleScreen
+            key={`detalle-${vista.id}-${vista.aviso ?? ''}`}
+            licenciasService={licenciasService}
+            idLicencia={vista.id}
+            aviso={vista.aviso}
+            onVolver={() => setVista({ tipo: 'catalogo' })}
+            onVerAsignados={(lic) => setVista({ tipo: 'asignados', id: lic.id })}
+            onAsignar={(lic) => setVista({ tipo: 'asignar', id: lic.id })}
+          />
+        )}
+
+        {pestanaActiva === 'licencias' && vista.tipo === 'asignados' && (
+          <EmpleadosAsignadosScreen
+            licenciasService={licenciasService}
+            idLicencia={vista.id}
+            onVolver={() => setVista({ tipo: 'detalle', id: vista.id })}
+            renderLiberar={(empleado, licencia, alLiberar) => (
+              <LiberarCupoButton
+                licenciasService={licenciasService}
+                empleado={empleado}
+                licencia={licencia}
+                onLiberado={alLiberar}
+              />
+            )}
+          />
+        )}
+
+        {pestanaActiva === 'licencias' && vista.tipo === 'asignar' && (
+          <AsignarLicenciaScreen
+            licenciasService={licenciasService}
+            idLicencia={vista.id}
+            onVolver={() => setVista({ tipo: 'detalle', id: vista.id })}
+            onAsignado={(mensaje) => setVista({ tipo: 'detalle', id: vista.id, aviso: mensaje })}
           />
         )}
 
@@ -91,7 +166,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
       <BottomBar
         pestanaActiva={pestanaActiva}
-        onSeleccionarPestana={setPestanaActiva}
+        onSeleccionarPestana={seleccionarPestana}
       />
     </SafeAreaView>
   );
