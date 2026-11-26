@@ -1,6 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
-  Platform,
   SafeAreaView,
   StyleSheet,
   Text,
@@ -8,64 +7,92 @@ import {
   View,
 } from 'react-native';
 import { SessionUser } from '../../auth/models/types';
+import { DashboardScreen } from '../../dashboard/views/DashboardScreen';
+import { DashboardService } from '../../dashboard/services/DashboardService';
+import { LicenciasScreen } from '../../licencias/views/LicenciasScreen';
+import { LicenciasService } from '../../licencias/services/LicenciasService';
+import { BottomBar, PestanaNavegacion } from '../../navigation/BottomBar';
+import { UsersIcon } from '../../../shared/components/Icons';
 
 export interface HomeScreenProps {
   readonly usuario: SessionUser;
   readonly onCerrarSesion: () => void;
+  readonly dashboardService?: DashboardService;
+  readonly licenciasService?: LicenciasService;
 }
 
 /**
- * Capa View - Pantalla Principal (HomeScreen)
- * - Muestra la sesión autenticada recuperada o recién iniciada.
- * - Brinda información del usuario y acción de cierre de sesión.
+ * Capa View - Contenedor Principal Autenticado de AssetOps
+ * - Conecta las pantallas de Dashboard (HU08) y Licencias (HU05).
+ * - Integra la BottomBar fija con navegación reactiva.
  */
-export const HomeScreen: React.FC<HomeScreenProps> = ({ usuario, onCerrarSesion }) => {
+export const HomeScreen: React.FC<HomeScreenProps> = ({
+  usuario,
+  onCerrarSesion,
+  dashboardService,
+  licenciasService,
+}) => {
+  const [pestanaActiva, setPestanaActiva] = useState<PestanaNavegacion>('inicio');
+  const [licenciaIdSeleccionada, setLicenciaIdSeleccionada] = useState<string | undefined>(undefined);
+
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.card}>
-        <View style={styles.header}>
-          <View style={styles.badge}>
-            <View style={styles.badgeDot} />
-            <Text style={styles.badgeText}>Sesión Activa</Text>
+      <View style={styles.content}>
+        {pestanaActiva === 'inicio' && (
+          <DashboardScreen
+            dashboardService={dashboardService}
+            licenciasService={licenciasService}
+            nombreUsuario={usuario.nombre}
+            onNavegarLicencias={() => {
+              setLicenciaIdSeleccionada(undefined);
+              setPestanaActiva('licencias');
+            }}
+            onRevisarLicencia={(licenciaId, software) => {
+              // Enlace al detalle de licencias (PR 9 de Hugo)
+              setLicenciaIdSeleccionada(software || licenciaId);
+              setPestanaActiva('licencias');
+            }}
+          />
+        )}
+
+        {pestanaActiva === 'licencias' && (
+          <LicenciasScreen
+            licenciasService={licenciasService}
+            licenciaIdInicial={licenciaIdSeleccionada}
+            onSeleccionarLicencia={(_licencia) => {
+              // Punto de conexión para Detalle de Licencia (PR 9 de Hugo - HU05)
+            }}
+          />
+        )}
+
+        {pestanaActiva === 'empleados' && (
+          <View style={styles.empleadosPlaceholder}>
+            <View style={styles.empleadosCard}>
+              <View style={styles.empleadosIconBox}>
+                <UsersIcon color="#107C41" size={36} />
+              </View>
+              <Text style={styles.empleadosTitulo}>Gestión de Empleados</Text>
+              <Text style={styles.empleadosSub}>
+                Sesión iniciada como {usuario.nombre} ({usuario.correo}).
+              </Text>
+
+              <TouchableOpacity
+                style={styles.logoutButton}
+                onPress={onCerrarSesion}
+                activeOpacity={0.85}
+                accessibilityRole="button"
+              >
+                <Text style={styles.logoutButtonText}>Cerrar Sesión</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-          <Text style={styles.title}>AssetOps</Text>
-          <Text style={styles.subtitle}>Panel de Control y Activos</Text>
-        </View>
-
-        <View style={styles.userInfoCard}>
-          <Text style={styles.userSectionTitle}>Datos del Usuario</Text>
-
-          <View style={styles.fieldRow}>
-            <Text style={styles.fieldLabel}>Nombre:</Text>
-            <Text style={styles.fieldValue}>{usuario.nombre}</Text>
-          </View>
-
-          <View style={styles.fieldRow}>
-            <Text style={styles.fieldLabel}>Correo:</Text>
-            <Text style={styles.fieldValue}>{usuario.correo}</Text>
-          </View>
-
-          <View style={styles.fieldRow}>
-            <Text style={styles.fieldLabel}>ID de Usuario:</Text>
-            <Text style={styles.fieldValueMono}>{usuario.idUsuario}</Text>
-          </View>
-        </View>
-
-        <View style={styles.infoBanner}>
-          <Text style={styles.infoBannerText}>
-            🔒 Tu sesión está guardada de forma segura con Expo SecureStore. Al cerrar y reabrir la app, entrarás automáticamente.
-          </Text>
-        </View>
-
-        <TouchableOpacity
-          style={styles.logoutButton}
-          onPress={onCerrarSesion}
-          activeOpacity={0.85}
-          accessibilityRole="button"
-        >
-          <Text style={styles.logoutButtonText}>Cerrar Sesión</Text>
-        </TouchableOpacity>
+        )}
       </View>
+
+      <BottomBar
+        pestanaActiva={pestanaActiva}
+        onSeleccionarPestana={setPestanaActiva}
+      />
     </SafeAreaView>
   );
 };
@@ -75,121 +102,66 @@ export default HomeScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0F172A', // Slate 900
+    backgroundColor: '#F6F8F6',
+  },
+  content: {
+    flex: 1,
+  },
+  empleadosPlaceholder: {
+    flex: 1,
     justifyContent: 'center',
-    paddingHorizontal: 24,
-  },
-  card: {
-    backgroundColor: '#1E293B', // Slate 800
-    borderRadius: 16,
+    alignItems: 'center',
     padding: 24,
-    borderWidth: 1,
-    borderColor: '#334155', // Slate 700
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.35,
-    shadowRadius: 12,
-    elevation: 8,
   },
-  header: {
-    marginBottom: 20,
-    alignItems: 'center',
-  },
-  badge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(34, 197, 94, 0.15)',
-    paddingHorizontal: 12,
-    paddingVertical: 5,
+  empleadosCard: {
+    backgroundColor: '#FFFFFF',
     borderRadius: 20,
-    marginBottom: 12,
+    padding: 24,
+    alignItems: 'center',
+    width: '100%',
+    maxWidth: 360,
     borderWidth: 1,
-    borderColor: 'rgba(34, 197, 94, 0.3)',
+    borderColor: '#E5E7EB',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 3,
   },
-  badgeDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#22C55E', // Green 500
-    marginRight: 6,
-  },
-  badgeText: {
-    color: '#86EFAC', // Green 300
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  title: {
-    fontSize: 26,
-    fontWeight: '700',
-    color: '#F8FAFC',
-    letterSpacing: 0.5,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#94A3B8',
-    marginTop: 4,
-  },
-  userInfoCard: {
-    backgroundColor: '#0F172A',
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#334155',
+  empleadosIconBox: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#ECFDF5',
+    justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
   },
-  userSectionTitle: {
-    fontSize: 13,
+  empleadosTitulo: {
+    fontSize: 20,
     fontWeight: '700',
-    color: '#38BDF8', // Sky 400
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-    marginBottom: 12,
+    color: '#111827',
+    marginBottom: 8,
   },
-  fieldRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 6,
-    borderBottomWidth: 1,
-    borderBottomColor: '#1E293B',
-  },
-  fieldLabel: {
+  empleadosSub: {
     fontSize: 14,
-    color: '#94A3B8',
-    fontWeight: '500',
-  },
-  fieldValue: {
-    fontSize: 14,
-    color: '#F8FAFC',
-    fontWeight: '600',
-  },
-  fieldValueMono: {
-    fontSize: 12,
-    color: '#CBD5E1',
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-  },
-  infoBanner: {
-    backgroundColor: 'rgba(56, 189, 248, 0.1)',
-    borderRadius: 10,
-    padding: 12,
-    borderLeftWidth: 3,
-    borderLeftColor: '#38BDF8',
-    marginBottom: 20,
-  },
-  infoBannerText: {
-    fontSize: 12,
-    color: '#BAE6FD',
-    lineHeight: 18,
+    color: '#61746A',
+    textAlign: 'center',
+    marginBottom: 24,
   },
   logoutButton: {
-    backgroundColor: '#DC2626', // Red 600
-    borderRadius: 10,
+    backgroundColor: '#0F382A',
     paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    width: '100%',
     alignItems: 'center',
-    justifyContent: 'center',
   },
   logoutButtonText: {
     color: '#FFFFFF',
-    fontSize: 15,
     fontWeight: '700',
+    fontSize: 14,
   },
 });

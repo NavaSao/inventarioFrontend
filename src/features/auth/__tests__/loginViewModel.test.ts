@@ -52,7 +52,7 @@ export async function ejecutarPruebasDirectas(): Promise<void> {
     errorVacios === 'Por favor ingresa tu correo y contraseña.',
     'Debería rechazar campos vacíos'
   );
-  console.log('✅ Prueba 1 (Campos vacíos): PASÓ ->', errorVacios);
+  console.log('[OK] Prueba 1 (Campos vacíos): PASÓ ->', errorVacios);
 
   // Prueba 2: Validación de formato erróneo de correo (contraseña "12345")
   const errorFormato = await validarYDespachar('usuario_sin_dominio', '12345');
@@ -60,7 +60,7 @@ export async function ejecutarPruebasDirectas(): Promise<void> {
     errorFormato === 'Ingresa un formato de correo electrónico válido.',
     'Debería rechazar formato de correo inválido'
   );
-  console.log('✅ Prueba 2 (Formato erróneo de correo): PASÓ ->', errorFormato);
+  console.log('[OK] Prueba 2 (Formato erróneo de correo): PASÓ ->', errorFormato);
 
   // Prueba 3: Conmutación de visibilidad de contraseña (toggle) con "12345"
   const estadoVisibilidad = { mostrarPassword: false };
@@ -77,7 +77,7 @@ export async function ejecutarPruebasDirectas(): Promise<void> {
     estadoVisibilidad.mostrarPassword === false,
     'Debería ocultar la contraseña "12345"'
   );
-  console.log('✅ Prueba 3 (Mostrar y ocultar contraseña): PASÓ');
+  console.log('[OK] Prueba 3 (Mostrar y ocultar contraseña): PASÓ');
 
   // Prueba 4: Compruebo los datos normalizados sin imprimir las credenciales.
   const errorExito = await validarYDespachar('  DIANA.Admin@AssetOps.COM  ', '12345');
@@ -88,7 +88,7 @@ export async function ejecutarPruebasDirectas(): Promise<void> {
       (ultimoPayloadRecibido as LoginCredentials).password === '12345',
     'El payload normalizado debe tener correo en minúsculas y password "12345"'
   );
-  console.log('✅ Prueba 4 (Datos de acceso normalizados): PASÓ\n');
+  console.log('[OK] Prueba 4 (Datos de acceso normalizados): PASÓ\n');
 }
 
 ejecutarPruebasDirectas();

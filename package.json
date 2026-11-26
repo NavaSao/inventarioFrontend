@@ -14,7 +14,15 @@
     "react-native-web": "^0.21.4"
   },
   "devDependencies": {
+    "@testing-library/dom": "^10.4.2",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/react-native": "^14.1.0",
+    "@types/jest": "^30.0.0",
     "@types/react": "~19.3.0",
+    "jest": "^30.5.2",
+    "jest-environment-jsdom": "^30.5.2",
+    "jsdom": "^31.0.1",
+    "ts-jest": "^29.4.15",
     "typescript": "~6.0.3"
   },
   "scripts": {
@@ -22,7 +30,7 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "test": "npx tsx src/features/auth/__tests__/loginViewModel.test.ts && npx tsx src/features/auth/__tests__/authIntegration.test.ts"
+    "test": "node scripts/runTests.js"
   },
   "private": true
 }

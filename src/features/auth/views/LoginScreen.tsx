@@ -47,6 +47,7 @@ const colores = {
 export const LoginScreen: React.FC<LoginScreenProps> = ({ authService, onLoginExitoso }) => {
   const [fuentesListas] = useFonts(fuentes);
   const [ayudaVisible, setAyudaVisible] = useState(false);
+  const [intentoEnvio, setIntentoEnvio] = useState(false);
   const inputPassword = useRef<React.ComponentRef<typeof TextInput>>(null);
   const correoTi = process.env.EXPO_PUBLIC_TI_EMAIL?.trim();
   const regular = fuentesListas && styles.interRegular;
@@ -64,6 +65,14 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ authService, onLoginEx
     toggleMostrarPassword,
     ejecutarLogin,
   } = useLoginViewModel(authService, onLoginExitoso);
+
+  const correoVacio = intentoEnvio && !correo.trim();
+  const passwordVacia = intentoEnvio && !password.trim();
+
+  const handleSubmitLogin = () => {
+    setIntentoEnvio(true);
+    void ejecutarLogin();
+  };
 
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -92,10 +101,16 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ authService, onLoginEx
               </View>
             )}
 
-            <Text style={[styles.label, semibold]}>Correo electrónico</Text>
+            <Text style={[styles.requiredLegend, regular]}>
+              <Text style={styles.requiredAsterisk}>*</Text> Campos obligatorios
+            </Text>
+
+            <Text style={[styles.label, semibold]}>
+              Correo electrónico <Text style={styles.requiredAsterisk}>*</Text>
+            </Text>
             <TextInput
               accessibilityLabel="Correo electrónico"
-              style={[styles.input, regular]}
+              style={[styles.input, regular, correoVacio && styles.inputError]}
               placeholder="admin@empresa.com"
               placeholderTextColor={colores.secundario}
               autoComplete="email"
@@ -109,9 +124,16 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ authService, onLoginEx
               value={correo}
               onChangeText={setCorreo}
             />
+            {correoVacio && (
+              <Text style={[styles.fieldErrorText, regular]}>
+                El correo electrónico es obligatorio.
+              </Text>
+            )}
 
-            <Text style={[styles.label, styles.passwordLabel, semibold]}>Contraseña</Text>
-            <View style={styles.passwordGroup}>
+            <Text style={[styles.label, styles.passwordLabel, semibold]}>
+              Contraseña <Text style={styles.requiredAsterisk}>*</Text>
+            </Text>
+            <View style={[styles.passwordGroup, passwordVacia && styles.inputError]}>
               <TextInput
                 ref={inputPassword}
                 accessibilityLabel="Contraseña"
@@ -123,7 +145,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ authService, onLoginEx
                 autoCapitalize="none"
                 autoCorrect={false}
                 returnKeyType="go"
-                onSubmitEditing={ejecutarLogin}
+                onSubmitEditing={handleSubmitLogin}
                 editable={!cargando}
                 value={password}
                 onChangeText={setPassword}
@@ -139,6 +161,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ authService, onLoginEx
                 {mostrarPassword && <View style={styles.eyeStrike} />}
               </TouchableOpacity>
             </View>
+            {passwordVacia && (
+              <Text style={[styles.fieldErrorText, regular]}>
+                La contraseña es obligatoria.
+              </Text>
+            )}
 
             <TouchableOpacity
               accessibilityRole="button"
@@ -150,7 +177,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ authService, onLoginEx
 
             <TouchableOpacity
               style={[styles.loginButton, cargando && styles.loginButtonDisabled]}
-              onPress={ejecutarLogin}
+              onPress={handleSubmitLogin}
               disabled={cargando}
               activeOpacity={0.85}
               accessibilityRole="button"
@@ -270,6 +297,10 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   errorText: { color: colores.error, fontSize: 14, lineHeight: 20 },
+  requiredLegend: { color: colores.secundario, fontSize: 12, marginBottom: 14 },
+  requiredAsterisk: { color: colores.error, fontWeight: '700' },
+  inputError: { borderColor: colores.error, backgroundColor: '#FFF7F6' },
+  fieldErrorText: { color: colores.error, fontSize: 12, marginTop: 6 },
   label: { color: colores.marca, fontSize: 13, lineHeight: 18, marginBottom: 10 },
   input: {
     minHeight: 56,

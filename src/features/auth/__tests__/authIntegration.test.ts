@@ -8,7 +8,7 @@ import { AuthService } from '../services/AuthService';
 
 function assert(condition: boolean, message: string): void {
   if (!condition) {
-    throw new Error(`❌ Falló la prueba: ${message}`);
+    throw new Error(`[FALLO] Falló la prueba: ${message}`);
   }
 }
 
@@ -83,7 +83,7 @@ export async function correrPruebasIntegracionAuth(): Promise<void> {
     assert(token === 'jwt-token-valido-123', 'El token devuelto debe coincidir');
     const tokenGuardado = await storage.obtenerToken();
     assert(tokenGuardado === 'jwt-token-valido-123', 'El token debe guardarse en ISecureStorage');
-    console.log('✅ Prueba 1 (LoginCommand 200 OK): Token persistido correctamente en storage');
+    console.log('[OK] Prueba 1 (LoginCommand 200 OK): Token persistido correctamente en storage');
   }
 
   // ==========================================
@@ -108,7 +108,7 @@ export async function correrPruebasIntegracionAuth(): Promise<void> {
     assert(capturado !== null, 'Debe lanzar HttpError ante 400');
     assert(capturado?.status === 400, 'El status debe ser 400');
     assert(capturado?.message === 'Datos de inicio de sesión inválidos', 'El mensaje debe coincidir');
-    console.log('✅ Prueba 2 (LoginCommand 400 Bad Request): Rechaza y mapea mensaje esperado');
+    console.log('[OK] Prueba 2 (LoginCommand 400 Bad Request): Rechaza y mapea mensaje esperado');
   }
 
   // ==========================================
@@ -133,7 +133,7 @@ export async function correrPruebasIntegracionAuth(): Promise<void> {
     assert(capturado !== null, 'Debe lanzar HttpError ante 401');
     assert(capturado?.status === 401, 'El status debe ser 401');
     assert(capturado?.message === 'Credenciales incorrectas', 'La app debe mostrar el mensaje de credenciales');
-    console.log('✅ Prueba 3 (LoginCommand 401): Muestra "Credenciales incorrectas"');
+    console.log('[OK] Prueba 3 (LoginCommand 401): Muestra "Credenciales incorrectas"');
   }
 
   // ==========================================
@@ -162,7 +162,7 @@ export async function correrPruebasIntegracionAuth(): Promise<void> {
     assert(usuario !== null, 'Debe retornar los datos del usuario');
     assert(usuario?.idUsuario === 'user-001', 'idUsuario debe coincidir');
     assert(usuario?.nombre === 'Diana Administradora', 'Nombre debe coincidir');
-    console.log('✅ Prueba 4 (ValidarSesionQuery 200 OK): Sesión recuperada exitosamente');
+    console.log('[OK] Prueba 4 (ValidarSesionQuery 200 OK): Sesión recuperada exitosamente');
   }
 
   // ==========================================
@@ -183,7 +183,7 @@ export async function correrPruebasIntegracionAuth(): Promise<void> {
     assert(usuario === null, 'Debe retornar null ante 401');
     const tokenRestante = await storage.obtenerToken();
     assert(tokenRestante === null, 'REGLA: Ante 401 el token DEBE ser eliminado del storage');
-    console.log('✅ Prueba 5 (ValidarSesionQuery 401): Token eliminado del storage y redirige a login');
+    console.log('[OK] Prueba 5 (ValidarSesionQuery 401): Token eliminado del storage y redirige a login');
   }
 
   // ==========================================
@@ -222,7 +222,7 @@ export async function correrPruebasIntegracionAuth(): Promise<void> {
     };
     const usuario = await ejecutarValidarSesionQuery(httpClient, storage, baseUrl);
     assert(usuario?.idUsuario === 'u-1', 'Debe recuperar la sesión al reintentar');
-    console.log('✅ Prueba 6 (ValidarSesionQuery): Recupera la sesión cuando vuelve la conexión');
+    console.log('[OK] Prueba 6 (ValidarSesionQuery): Recupera la sesión cuando vuelve la conexión');
   }
 
   // ==========================================
@@ -234,7 +234,7 @@ export async function correrPruebasIntegracionAuth(): Promise<void> {
     await ejecutarLogoutCommand(storage);
     const token = await storage.obtenerToken();
     assert(token === null, 'El token debe ser null tras logout');
-    console.log('✅ Prueba 7 (LogoutCommand): Cierre de sesión y limpieza de storage exitosa');
+    console.log('[OK] Prueba 7 (LogoutCommand): Cierre de sesión y limpieza de storage exitosa');
   }
 
   // ==========================================
@@ -274,7 +274,7 @@ export async function correrPruebasIntegracionAuth(): Promise<void> {
     assert(tokenPostLogout === null, 'AuthService.logout debe limpiar el token');
     const sesionAlReabrir = await authService.validarSesion();
     assert(sesionAlReabrir === null, 'La app debe seguir sin sesión al volver a abrir');
-    console.log('✅ Prueba 8 (AuthService Integrado): Flujo completo de orquestación verificado\n');
+    console.log('[OK] Prueba 8 (AuthService Integrado): Flujo completo de orquestación verificado\n');
   }
 
   // PRUEBA 9: La API respondió con error; el token sigue disponible para reintentar.
@@ -297,10 +297,10 @@ export async function correrPruebasIntegracionAuth(): Promise<void> {
     assert(capturado?.status === 500, 'La falla de la API debe conservar el código HTTP');
     assert(capturado?.message === 'Error interno del servidor', 'Debe conservar el mensaje de la API');
     assert(await storage.obtenerToken() === 'jwt-activo', 'El token debe conservarse');
-    console.log('✅ Prueba 9 (ValidarSesionQuery 500): Conserva el mensaje de la API y el token');
+    console.log('[OK] Prueba 9 (ValidarSesionQuery 500): Conserva el mensaje de la API y el token');
   }
 
-  console.log('🎉 TODAS LAS PRUEBAS UNITARIAS DE CQRS, SOLID Y CASOS DE USO PASARON AL 100%');
+  console.log('[EXITO] TODAS LAS PRUEBAS UNITARIAS DE CQRS, SOLID Y CASOS DE USO PASARON AL 100%');
 }
 
 correrPruebasIntegracionAuth();
