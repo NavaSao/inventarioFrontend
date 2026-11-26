@@ -25,7 +25,10 @@ export interface ActividadReciente {
   readonly fecha: string;
 }
 
+export type ActivosPorEstado = Readonly<Record<'DISPONIBLE' | 'ASIGNADO' | 'EN_MANTENIMIENTO' | 'DADO_DE_BAJA', number>>;
+
 export interface DashboardData {
+  readonly activosPorEstado: ActivosPorEstado;
   readonly metricas: DashboardMetricas;
   readonly vencimientosMenos30Dias: AlertaVencimiento[];
   readonly actividadReciente: ActividadReciente[];

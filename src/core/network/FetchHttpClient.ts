@@ -1,10 +1,10 @@
-import { HttpError, HttpResponse, IHttpClient, NetworkError } from './IHttpClient';
+import { HttpError, HttpResponse, IRestHttpClient, NetworkError } from './IHttpClient';
 
 /**
  * Implementación concreta de IHttpClient utilizando fetch nativo (SRP / LSP).
  * Maneja cabeceras predeterminadas, timeouts y transformación de respuestas JSON.
  */
-export class FetchHttpClient implements IHttpClient {
+export class FetchHttpClient implements IRestHttpClient {
   private readonly defaultTimeoutMs: number;
 
   constructor(defaultTimeoutMs: number = 10000) {
@@ -21,15 +21,28 @@ export class FetchHttpClient implements IHttpClient {
     });
   }
 
-  async post<T>(url: string, body?: unknown, headers?: Record<string, string>): Promise<HttpResponse<T>> {
+  post<T>(url: string, body?: unknown, headers?: Record<string, string>): Promise<HttpResponse<T>> {
+    return this.enviar<T>('POST', url, body, headers);
+  }
+
+  put<T>(url: string, body?: unknown, headers?: Record<string, string>): Promise<HttpResponse<T>> {
+    return this.enviar<T>('PUT', url, body, headers);
+  }
+
+  patch<T>(url: string, body?: unknown, headers?: Record<string, string>): Promise<HttpResponse<T>> {
+    return this.enviar<T>('PATCH', url, body, headers);
+  }
+
+  /** Serializa a JSON salvo que el cuerpo ya sea texto (p. ej. una foto en base64 como text/plain). */
+  private enviar<T>(method: string, url: string, body?: unknown, headers?: Record<string, string>) {
     return this.request<T>(url, {
-      method: 'POST',
+      method,
       headers: {
         'Content-Type': 'application/json',
         Accept: 'application/json',
         ...headers,
       },
-      body: body !== undefined ? JSON.stringify(body) : undefined,
+      body: body === undefined || typeof body === 'string' ? body : JSON.stringify(body),
     });
   }
 

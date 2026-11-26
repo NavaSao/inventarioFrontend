@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
-  Modal,
   Platform,
   RefreshControl,
   SafeAreaView,
@@ -13,6 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { ModalMovil } from '../../../shared/ui/ModalMovil';
 import { useFonts } from 'expo-font';
 import { Inter_400Regular } from '@expo-google-fonts/inter/400Regular';
 import { Inter_600SemiBold } from '@expo-google-fonts/inter/600SemiBold';
@@ -515,7 +515,7 @@ export const LicenciasScreen: React.FC<LicenciasScreenProps> = ({
 
       {/* Modal / Formulario Nueva Licencia */}
       {modalNuevoVisible && (
-        <Modal
+        <ModalMovil
           visible={modalNuevoVisible}
           animationType="slide"
           presentationStyle="pageSheet"
@@ -819,7 +819,7 @@ export const LicenciasScreen: React.FC<LicenciasScreenProps> = ({
               </ScrollView>
             </KeyboardAvoidingView>
           </SafeAreaView>
-        </Modal>
+        </ModalMovil>
       )}
 
       {/* Modal Pantalla de Licencia Activa */}

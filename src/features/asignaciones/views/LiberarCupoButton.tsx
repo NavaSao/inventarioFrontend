@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
-import { ActivityIndicator, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ModalMovil } from '../../../shared/ui/ModalMovil';
 import { generarUuid } from '../../../core/utils/uuid';
 import { EmpleadoAsignado, LicenciaDetalle } from '../../licencias/models/types';
 import { LicenciasService } from '../../licencias/services/LicenciasService';
@@ -100,7 +101,7 @@ export const LiberarCupoButton: React.FC<LiberarCupoButtonProps> = ({
         <Text style={[styles.botonTexto, t.semibold]}>Liberar</Text>
       </TouchableOpacity>
 
-      <Modal visible={visible} transparent animationType="fade" onRequestClose={cerrar}>
+      <ModalMovil visible={visible} transparent animationType="fade" onRequestClose={cerrar}>
         <View style={styles.fondo}>
           <View style={styles.caja}>
             <Text style={[styles.titulo, t.bold]}>Liberar cupo</Text>
@@ -168,7 +169,7 @@ export const LiberarCupoButton: React.FC<LiberarCupoButtonProps> = ({
             </TouchableOpacity>
           </View>
         </View>
-      </Modal>
+      </ModalMovil>
     </>
   );
 };

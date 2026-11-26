@@ -33,3 +33,9 @@ export interface IHttpClient {
   post<T>(url: string, body?: unknown, headers?: Record<string, string>): Promise<HttpResponse<T>>;
 }
 
+/** Cliente con los verbos de edición (ISP: solo lo usan los módulos que actualizan recursos). */
+export interface IRestHttpClient extends IHttpClient {
+  put<T>(url: string, body?: unknown, headers?: Record<string, string>): Promise<HttpResponse<T>>;
+  patch<T>(url: string, body?: unknown, headers?: Record<string, string>): Promise<HttpResponse<T>>;
+}
+

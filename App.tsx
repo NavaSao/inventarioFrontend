@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef } from 'react';
 import {
   ActivityIndicator,
   Platform,
@@ -12,6 +12,10 @@ import { StatusBar } from 'expo-status-bar';
 
 import { getApiBaseUrl } from './src/core/config';
 import { FetchHttpClient } from './src/core/network/FetchHttpClient';
+import { SesionHttpClient } from './src/core/network/SesionHttpClient';
+import { ApiClient } from './src/core/network/ApiClient';
+import { ActivosService } from './src/features/activos/services/ActivosService';
+import { EmpleadosService } from './src/features/empleados/services/EmpleadosService';
 import { ExpoSecureStorage } from './src/core/storage/ExpoSecureStorage';
 import { AuthService } from './src/features/auth/services/AuthService';
 import { useAuthSessionViewModel } from './src/features/auth/viewmodels/useAuthSessionViewModel';
@@ -20,6 +24,7 @@ import { HomeScreen } from './src/features/home/views/HomeScreen';
 import { DashboardService } from './src/features/dashboard/services/DashboardService';
 import { LicenciasService } from './src/features/licencias/services/LicenciasService';
 import { WifiOffIcon } from './src/shared/components/Icons';
+import { marcoMovil } from './src/shared/ui/ModalMovil';
 
 /**
  * Composition Root de la aplicación (SOLID - Dependency Inversion)
@@ -35,17 +40,27 @@ export default function App() {
     () => new AuthService(httpClient, secureStorage, baseUrl),
     [baseUrl, httpClient, secureStorage]
   );
+  // Las peticiones autenticadas que reciban 401 (token expirado o revocado) cierran la sesión.
+  const alExpirarSesion = useRef<() => void>(() => {});
+  const sesionHttp = useMemo(
+    () => new SesionHttpClient(httpClient, () => alExpirarSesion.current()),
+    [httpClient]
+  );
+  const api = useMemo(() => new ApiClient(sesionHttp, secureStorage, baseUrl), [baseUrl, sesionHttp, secureStorage]);
   const dashboardService = useMemo(
-    () => new DashboardService(httpClient, secureStorage, baseUrl),
-    [baseUrl, httpClient, secureStorage]
+    () => new DashboardService(sesionHttp, secureStorage, baseUrl),
+    [baseUrl, sesionHttp, secureStorage]
   );
   const licenciasService = useMemo(
-    () => new LicenciasService(httpClient, secureStorage, baseUrl),
-    [baseUrl, httpClient, secureStorage]
+    () => new LicenciasService(sesionHttp, secureStorage, baseUrl),
+    [baseUrl, sesionHttp, secureStorage]
   );
+  const activosService = useMemo(() => new ActivosService(api), [api]);
+  const empleadosService = useMemo(() => new EmpleadosService(api), [api]);
 
   const { sessionState, reintentarValidacion, cerrarSesion, notificarLoginExitoso } =
     useAuthSessionViewModel(authService);
+  alExpirarSesion.current = () => void cerrarSesion();
   const autenticado = sessionState.status === 'autenticado';
   const mostrandoLogin = sessionState.status === 'no_autenticado';
 
@@ -57,6 +72,7 @@ export default function App() {
     <View style={styles.rootContainer}>
       <View
         style={[
+          marcoMovil.marco,
           styles.deviceFrame,
           mostrandoLogin && styles.loginRoot,
           autenticado && styles.appRoot,
@@ -114,6 +130,8 @@ export default function App() {
             onCerrarSesion={handleCerrarSesion}
             dashboardService={dashboardService}
             licenciasService={licenciasService}
+            activosService={activosService}
+            empleadosService={empleadosService}
           />
         )}
 
@@ -136,19 +154,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   deviceFrame: {
-    flex: 1,
-    width: '100%',
-    maxWidth: 440,
     backgroundColor: '#F8FAFC',
-    overflow: 'hidden',
     position: 'relative',
     ...Platform.select({
       web: {
-        height: '100%',
-        maxHeight: 930,
-        borderRadius: 40,
         boxShadow: '0 30px 80px -15px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.1)',
-        marginVertical: 12,
       },
       default: {},
     }),

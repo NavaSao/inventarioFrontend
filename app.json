@@ -20,6 +20,14 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "AssetOps usa la cámara para escanear etiquetas y fotografiar equipos."
+        }
+      ]
+    ]
   }
 }

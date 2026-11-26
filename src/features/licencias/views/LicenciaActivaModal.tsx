@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  Modal,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -8,6 +7,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { ModalMovil } from '../../../shared/ui/ModalMovil';
 import { Licencia } from '../models/types';
 import { AppIconBadge, CheckCircleIcon, ShieldIcon } from '../../../shared/components/Icons';
 
@@ -75,7 +75,7 @@ export const LicenciaActivaModal: React.FC<LicenciaActivaModalProps> = ({
   const colorEstado = esVencida ? '#EF4444' : esPorVencer ? '#F59E0B' : colores.emerald;
 
   return (
-    <Modal
+    <ModalMovil
       visible={visible}
       animationType="slide"
       presentationStyle="pageSheet"
@@ -265,7 +265,7 @@ export const LicenciaActivaModal: React.FC<LicenciaActivaModalProps> = ({
           </ScrollView>
         </View>
       </SafeAreaView>
-    </Modal>
+    </ModalMovil>
   );
 };
 

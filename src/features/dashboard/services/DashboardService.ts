@@ -3,6 +3,7 @@ import { ISecureStorage } from '../../../core/storage/ISecureStorage';
 import { AlertaVencimiento, ActividadReciente, DashboardData } from '../models/types';
 
 export const DASHBOARD_VACIO: DashboardData = {
+  activosPorEstado: { DISPONIBLE: 0, ASIGNADO: 0, EN_MANTENIMIENTO: 0, DADO_DE_BAJA: 0 },
   metricas: {
     cuposTotales: 0,
     aplicacionesActivas: 0,
@@ -104,6 +105,7 @@ export class DashboardService {
     }
 
     return {
+      activosPorEstado: { ...DASHBOARD_VACIO.activosPorEstado, ...raw.activosPorEstado },
       metricas: {
         cuposTotales,
         aplicacionesActivas,

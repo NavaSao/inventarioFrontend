@@ -1,12 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import {
-  BackHandler,
-  SafeAreaView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { BackHandler, SafeAreaView, StyleSheet, View } from 'react-native';
 import { SessionUser } from '../../auth/models/types';
 import { DashboardScreen } from '../../dashboard/views/DashboardScreen';
 import { DashboardService } from '../../dashboard/services/DashboardService';
@@ -17,7 +10,10 @@ import { EmpleadosAsignadosScreen } from '../../licencias/views/EmpleadosAsignad
 import { AsignarLicenciaScreen } from '../../asignaciones/views/AsignarLicenciaScreen';
 import { LiberarCupoButton } from '../../asignaciones/views/LiberarCupoButton';
 import { BottomBar, PestanaNavegacion } from '../../navigation/BottomBar';
-import { UsersIcon } from '../../../shared/components/Icons';
+import { ActivosNavegador } from '../../activos/views/ActivosNavegador';
+import { IActivosService } from '../../activos/models/types';
+import { EmpleadosNavegador } from '../../empleados/views/EmpleadosNavegador';
+import { IEmpleadosService } from '../../empleados/models/types';
 
 /** Pila de navegación dentro de la pestaña Licencias. */
 export type VistaLicencias =
@@ -31,6 +27,8 @@ export interface HomeScreenProps {
   readonly onCerrarSesion: () => void;
   readonly dashboardService?: DashboardService;
   readonly licenciasService?: LicenciasService;
+  readonly activosService: IActivosService;
+  readonly empleadosService: IEmpleadosService;
 }
 
 /**
@@ -43,6 +41,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   onCerrarSesion,
   dashboardService,
   licenciasService,
+  activosService,
+  empleadosService,
 }) => {
   const [pestanaActiva, setPestanaActiva] = useState<PestanaNavegacion>('inicio');
   const [licenciaIdSeleccionada, setLicenciaIdSeleccionada] = useState<string | undefined>(undefined);
@@ -74,6 +74,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             dashboardService={dashboardService}
             licenciasService={licenciasService}
             nombreUsuario={usuario.nombre}
+            onNavegarEquipos={() => setPestanaActiva('equipos')}
             onNavegarLicencias={() => {
               setLicenciaIdSeleccionada(undefined);
               setVista({ tipo: 'catalogo' });
@@ -140,27 +141,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           />
         )}
 
-        {pestanaActiva === 'empleados' && (
-          <View style={styles.empleadosPlaceholder}>
-            <View style={styles.empleadosCard}>
-              <View style={styles.empleadosIconBox}>
-                <UsersIcon color="#107C41" size={36} />
-              </View>
-              <Text style={styles.empleadosTitulo}>Gestión de Empleados</Text>
-              <Text style={styles.empleadosSub}>
-                Sesión iniciada como {usuario.nombre} ({usuario.correo}).
-              </Text>
+        {pestanaActiva === 'equipos' && (
+          <ActivosNavegador servicio={activosService} empleadosServicio={empleadosService} />
+        )}
 
-              <TouchableOpacity
-                style={styles.logoutButton}
-                onPress={onCerrarSesion}
-                activeOpacity={0.85}
-                accessibilityRole="button"
-              >
-                <Text style={styles.logoutButtonText}>Cerrar Sesión</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+        {pestanaActiva === 'empleados' && (
+          <EmpleadosNavegador servicio={empleadosService} onCerrarSesion={onCerrarSesion} />
         )}
       </View>
 
@@ -181,62 +167,5 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-  },
-  empleadosPlaceholder: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
-  empleadosCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 24,
-    alignItems: 'center',
-    width: '100%',
-    maxWidth: 360,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 3,
-  },
-  empleadosIconBox: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: '#ECFDF5',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#A7F3D0',
-  },
-  empleadosTitulo: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#111827',
-    marginBottom: 8,
-  },
-  empleadosSub: {
-    fontSize: 14,
-    color: '#61746A',
-    textAlign: 'center',
-    marginBottom: 24,
-  },
-  logoutButton: {
-    backgroundColor: '#0F382A',
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-    width: '100%',
-    alignItems: 'center',
-  },
-  logoutButtonText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-    fontSize: 14,
   },
 });

@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Modal,
   Platform,
   RefreshControl,
   SafeAreaView,
@@ -11,6 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { ModalMovil } from '../../../shared/ui/ModalMovil';
 import { useFonts } from 'expo-font';
 import { Inter_400Regular } from '@expo-google-fonts/inter/400Regular';
 import { Inter_600SemiBold } from '@expo-google-fonts/inter/600SemiBold';
@@ -38,6 +38,7 @@ export interface DashboardScreenProps {
   readonly licenciasService?: LicenciasService;
   readonly nombreUsuario?: string;
   readonly onNavegarLicencias?: () => void;
+  readonly onNavegarEquipos?: () => void;
   readonly onRevisarLicencia?: (licenciaId?: string, software?: string) => void;
 }
 
@@ -69,11 +70,18 @@ export const colores = {
 
 const fuentes = { Inter_400Regular, Inter_600SemiBold, Inter_700Bold };
 
+const ESTADOS_TABLERO: [keyof DashboardData['activosPorEstado'], string, string][] = [
+  ['DISPONIBLE', 'Disponibles', colores.emerald],
+  ['ASIGNADO', 'Asignados', colores.forest],
+  ['EN_MANTENIMIENTO', 'Mantenimiento', colores.ambarTexto],
+];
+
 export const DashboardScreen: React.FC<DashboardScreenProps> = ({
   dashboardService,
   licenciasService,
   nombreUsuario,
   onNavegarLicencias,
+  onNavegarEquipos,
   onRevisarLicencia,
 }) => {
   const [fuentesListas] = useFonts(fuentes);
@@ -407,6 +415,25 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
           </View>
         )}
 
+        {/* Equipos por estado (Dashboard Inicial: conteo de activos por estado) */}
+        <TouchableOpacity
+          style={styles.equiposTarjeta}
+          onPress={onNavegarEquipos}
+          activeOpacity={0.85}
+          accessibilityRole="button"
+          testID="tarjeta-equipos-estado"
+        >
+          <Text style={[styles.sectionTitle, bold]}>Equipos por estado</Text>
+          <View style={styles.equiposFila}>
+            {ESTADOS_TABLERO.map(([estado, texto, color]) => (
+              <View key={estado} style={styles.equiposCelda}>
+                <Text style={[styles.equiposCifra, bold, { color }]}>{datos.activosPorEstado[estado]}</Text>
+                <Text style={[styles.splitSub, regular]}>{texto}</Text>
+              </View>
+            ))}
+          </View>
+        </TouchableOpacity>
+
         {/* Alerta de Vencimiento en tono cálido (#FEF3C7) */}
         {vencimientosMenos30Dias.length > 0 && (
           <View style={styles.alertaCard} testID="tarjeta-alerta-vencimiento">
@@ -579,7 +606,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
 
       {/* Modal Historial de Actividad */}
       {modalActividadVisible && (
-        <Modal
+        <ModalMovil
           visible={modalActividadVisible}
           animationType="slide"
           presentationStyle="pageSheet"
@@ -643,7 +670,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
               })}
             </ScrollView>
           </SafeAreaView>
-        </Modal>
+        </ModalMovil>
       )}
     </SafeAreaView>
   );
@@ -652,6 +679,17 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
 export default DashboardScreen;
 
 const styles = StyleSheet.create({
+  equiposTarjeta: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 22,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: colores.bordeCard,
+    marginBottom: 16,
+  },
+  equiposFila: { flexDirection: 'row', marginTop: 12 },
+  equiposCelda: { flex: 1, alignItems: 'center' },
+  equiposCifra: { fontSize: 24 },
   safeArea: {
     flex: 1,
     backgroundColor: colores.background,

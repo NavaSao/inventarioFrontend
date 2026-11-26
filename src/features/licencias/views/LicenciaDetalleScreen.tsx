@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Linking,
-  Modal,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -10,6 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { ModalMovil } from '../../../shared/ui/ModalMovil';
 import { AppIconBadge, ArrowRightIcon, PlusIcon, UsersIcon, WifiOffIcon } from '../../../shared/components/Icons';
 import { LicenciaDetalle } from '../models/types';
 import { LicenciasService } from '../services/LicenciasService';
@@ -278,7 +278,7 @@ export const LicenciaDetalleScreen: React.FC<LicenciaDetalleScreenProps> = ({
       </ScrollView>
 
       {/* Confirmación de renovación */}
-      <Modal visible={renovacionVisible} transparent animationType="fade" onRequestClose={() => setRenovacionVisible(false)}>
+      <ModalMovil visible={renovacionVisible} transparent animationType="fade" onRequestClose={() => setRenovacionVisible(false)}>
         <View style={styles.modalFondo}>
           <View style={styles.modalCaja}>
             {renovacionEstado === 'enviada' ? (
@@ -325,7 +325,7 @@ export const LicenciaDetalleScreen: React.FC<LicenciaDetalleScreenProps> = ({
             )}
           </View>
         </View>
-      </Modal>
+      </ModalMovil>
     </View>
   );
 };

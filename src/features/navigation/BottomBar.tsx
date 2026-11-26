@@ -1,100 +1,47 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { GridIcon, HomeIcon, UsersIcon } from '../../shared/components/Icons';
+import { ComputerIcon, GridIcon, HomeIcon, UsersIcon } from '../../shared/components/Icons';
 
-export type PestanaNavegacion = 'inicio' | 'licencias' | 'empleados';
+export type PestanaNavegacion = 'inicio' | 'licencias' | 'equipos' | 'empleados';
 
 export interface BottomBarProps {
   readonly pestanaActiva: PestanaNavegacion;
   readonly onSeleccionarPestana: (pestana: PestanaNavegacion) => void;
 }
 
-export const BottomBar: React.FC<BottomBarProps> = ({
-  pestanaActiva,
-  onSeleccionarPestana,
-}) => {
-  const colorActivo = '#107C41'; // Emerald oficial AssetOps
-  const colorInactivo = '#61746A';
+const PESTANAS: { id: PestanaNavegacion; texto: string; Icono: typeof HomeIcon }[] = [
+  { id: 'inicio', texto: 'Inicio', Icono: HomeIcon },
+  { id: 'licencias', texto: 'Licencias', Icono: GridIcon },
+  { id: 'equipos', texto: 'Equipos', Icono: ComputerIcon },
+  { id: 'empleados', texto: 'Empleados', Icono: UsersIcon },
+];
 
-  return (
-    <View style={styles.barContainer}>
-      {/* Pestaña Inicio */}
-      <TouchableOpacity
-        style={styles.tabButton}
-        onPress={() => onSeleccionarPestana('inicio')}
-        activeOpacity={0.75}
-        accessibilityRole="tab"
-        accessibilityLabel="Inicio"
-        accessibilityState={{ selected: pestanaActiva === 'inicio' }}
-      >
-        <HomeIcon
-          color={pestanaActiva === 'inicio' ? colorActivo : colorInactivo}
-          size={22}
-        />
-        <Text
-          style={[
-            styles.tabText,
-            { color: pestanaActiva === 'inicio' ? colorActivo : colorInactivo },
-            pestanaActiva === 'inicio' && styles.tabTextActivo,
-          ]}
-        >
-          Inicio
-        </Text>
-        {pestanaActiva === 'inicio' && <View style={styles.activePill} />}
-      </TouchableOpacity>
+const colorActivo = '#107C41'; // Emerald oficial AssetOps
+const colorInactivo = '#61746A';
 
-      {/* Pestaña Licencias */}
-      <TouchableOpacity
-        style={styles.tabButton}
-        onPress={() => onSeleccionarPestana('licencias')}
-        activeOpacity={0.75}
-        accessibilityRole="tab"
-        accessibilityLabel="Licencias"
-        accessibilityState={{ selected: pestanaActiva === 'licencias' }}
-      >
-        <GridIcon
-          color={pestanaActiva === 'licencias' ? colorActivo : colorInactivo}
-          size={20}
-        />
-        <Text
-          style={[
-            styles.tabText,
-            { color: pestanaActiva === 'licencias' ? colorActivo : colorInactivo },
-            pestanaActiva === 'licencias' && styles.tabTextActivo,
-          ]}
+export const BottomBar: React.FC<BottomBarProps> = ({ pestanaActiva, onSeleccionarPestana }) => (
+  <View style={styles.barContainer}>
+    {PESTANAS.map(({ id, texto, Icono }) => {
+      const activa = pestanaActiva === id;
+      const color = activa ? colorActivo : colorInactivo;
+      return (
+        <TouchableOpacity
+          key={id}
+          style={styles.tabButton}
+          onPress={() => onSeleccionarPestana(id)}
+          activeOpacity={0.75}
+          accessibilityRole="tab"
+          accessibilityLabel={texto}
+          accessibilityState={{ selected: activa }}
         >
-          Licencias
-        </Text>
-        {pestanaActiva === 'licencias' && <View style={styles.activePill} />}
-      </TouchableOpacity>
-
-      {/* Pestaña Empleados */}
-      <TouchableOpacity
-        style={styles.tabButton}
-        onPress={() => onSeleccionarPestana('empleados')}
-        activeOpacity={0.75}
-        accessibilityRole="tab"
-        accessibilityLabel="Empleados"
-        accessibilityState={{ selected: pestanaActiva === 'empleados' }}
-      >
-        <UsersIcon
-          color={pestanaActiva === 'empleados' ? colorActivo : colorInactivo}
-          size={22}
-        />
-        <Text
-          style={[
-            styles.tabText,
-            { color: pestanaActiva === 'empleados' ? colorActivo : colorInactivo },
-            pestanaActiva === 'empleados' && styles.tabTextActivo,
-          ]}
-        >
-          Empleados
-        </Text>
-        {pestanaActiva === 'empleados' && <View style={styles.activePill} />}
-      </TouchableOpacity>
-    </View>
-  );
-};
+          <Icono color={color} size={21} />
+          <Text style={[styles.tabText, { color }, activa && styles.tabTextActivo]}>{texto}</Text>
+          {activa && <View style={styles.activePill} />}
+        </TouchableOpacity>
+      );
+    })}
+  </View>
+);
 
 export default BottomBar;
 

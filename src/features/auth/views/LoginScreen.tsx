@@ -8,7 +8,6 @@ import {
   Image,
   KeyboardAvoidingView,
   Linking,
-  Modal,
   Platform,
   ScrollView,
   StatusBar,
@@ -18,6 +17,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { ModalMovil } from '../../../shared/ui/ModalMovil';
 import type { ILoginService } from '../models/types';
 import { useLoginViewModel } from '../viewmodels/useLoginViewModel';
 
@@ -209,7 +209,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ authService, onLoginEx
         </View>
       </ScrollView>
 
-      <Modal
+      <ModalMovil
         transparent
         animationType="fade"
         visible={ayudaVisible}
@@ -244,7 +244,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ authService, onLoginEx
             </TouchableOpacity>
           </View>
         </View>
-      </Modal>
+      </ModalMovil>
     </KeyboardAvoidingView>
   );
 };
@@ -261,11 +261,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 24,
     paddingTop: Platform.select({
-      web: 74,
-      android: (StatusBar.currentHeight ?? 24) + 28,
-      default: 28,
+      web: 40,
+      android: (StatusBar.currentHeight ?? 24) + 12,
+      default: 12,
     }),
-    paddingBottom: 24,
+    paddingBottom: 12,
   },
   content: { width: '100%', maxWidth: 400 },
   interRegular: { fontFamily: 'Inter_400Regular' },
@@ -281,15 +281,15 @@ const styles = StyleSheet.create({
     minWidth: 146,
     minHeight: 26,
     justifyContent: 'center',
-    marginTop: 28,
+    marginTop: 16,
     paddingHorizontal: 12,
     borderRadius: 20,
     backgroundColor: colores.menta,
   },
   roleText: { color: colores.marca, fontSize: 10, lineHeight: 14 },
-  title: { marginTop: 21, color: colores.marca, fontSize: 36, lineHeight: 42 },
-  description: { marginTop: 19, color: colores.secundario, fontSize: 15, lineHeight: 23 },
-  form: { marginTop: 28 },
+  title: { marginTop: 12, color: colores.marca, fontSize: 30, lineHeight: 36 },
+  description: { marginTop: 8, color: colores.secundario, fontSize: 14, lineHeight: 20 },
+  form: { marginTop: 18 },
   errorBanner: {
     backgroundColor: colores.fondoError,
     borderRadius: 12,
@@ -297,13 +297,13 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   errorText: { color: colores.error, fontSize: 14, lineHeight: 20 },
-  requiredLegend: { color: colores.secundario, fontSize: 12, marginBottom: 14 },
+  requiredLegend: { color: colores.secundario, fontSize: 12, marginBottom: 8 },
   requiredAsterisk: { color: colores.error, fontWeight: '700' },
   inputError: { borderColor: colores.error, backgroundColor: '#FFF7F6' },
   fieldErrorText: { color: colores.error, fontSize: 12, marginTop: 6 },
-  label: { color: colores.marca, fontSize: 13, lineHeight: 18, marginBottom: 10 },
+  label: { color: colores.marca, fontSize: 13, lineHeight: 18, marginBottom: 6 },
   input: {
-    minHeight: 56,
+    minHeight: 50,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: colores.borde,
@@ -313,9 +313,9 @@ const styles = StyleSheet.create({
     color: colores.marca,
     fontSize: 14,
   },
-  passwordLabel: { marginTop: 21 },
+  passwordLabel: { marginTop: 12 },
   passwordGroup: {
-    minHeight: 56,
+    minHeight: 50,
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: 16,
@@ -365,11 +365,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     gap: 8,
-    marginTop: 28,
+    marginTop: 16,
   },
   securityIcon: { width: 20, height: 20 },
   secureText: { color: colores.secundario, fontSize: 11, lineHeight: 16 },
-  contactButton: { minHeight: 44, marginTop: 18, justifyContent: 'center', alignItems: 'center' },
+  contactButton: { minHeight: 36, marginTop: 4, justifyContent: 'center', alignItems: 'center' },
   contactText: { color: colores.secundario, fontSize: 12, lineHeight: 18, textAlign: 'center' },
   modalBackdrop: {
     flex: 1,
