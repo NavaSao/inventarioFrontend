@@ -15,8 +15,6 @@ import { LicenciaDetalle } from '../models/types';
 import { LicenciasService } from '../services/LicenciasService';
 import { BarraProgreso, ESTADO_UI, Encabezado, formatearFecha, paleta, ui, useTipografia } from './detalleUi';
 
-export const CORREO_SOPORTE_TI = process.env.EXPO_PUBLIC_CORREO_TI || 'ti@empresa.com';
-
 export interface LicenciaDetalleScreenProps {
   readonly licenciasService?: LicenciasService;
   readonly idLicencia: string;
@@ -30,7 +28,7 @@ export interface LicenciaDetalleScreenProps {
 }
 
 /** Construye el enlace de correo con la solicitud de renovación dirigida a TI. */
-export function construirSolicitudRenovacion(lic: LicenciaDetalle, correo = CORREO_SOPORTE_TI): string {
+export function construirSolicitudRenovacion(lic: LicenciaDetalle, correo: string): string {
   const asunto = `Solicitud de renovación · ${lic.software} (${lic.codigoLicencia})`;
   const cuerpo = [
     'Solicito la renovación de la siguiente licencia:',
@@ -68,12 +66,13 @@ export const LicenciaDetalleScreen: React.FC<LicenciaDetalleScreenProps> = ({
   aviso,
 }) => {
   const t = useTipografia();
+  const correoTi = process.env.EXPO_PUBLIC_TI_EMAIL?.trim() || process.env.EXPO_PUBLIC_CORREO_TI?.trim();
   const [detalle, setDetalle] = useState<LicenciaDetalle | null>(null);
   const [cargando, setCargando] = useState(true);
   const [refrescando, setRefrescando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [renovacionVisible, setRenovacionVisible] = useState(false);
-  const [renovacionEstado, setRenovacionEstado] = useState<'idle' | 'enviada' | 'error'>('idle');
+  const [renovacionEstado, setRenovacionEstado] = useState<'idle' | 'preparada' | 'error'>('idle');
 
   const cargar = useCallback(async () => {
     if (!licenciasService) {
@@ -97,10 +96,11 @@ export const LicenciaDetalleScreen: React.FC<LicenciaDetalleScreenProps> = ({
   }, [cargar]);
 
   const solicitarRenovacion = async () => {
-    if (!detalle) return;
+    if (!detalle || !correoTi) return;
     try {
-      await Linking.openURL(construirSolicitudRenovacion(detalle));
-      setRenovacionEstado('enviada');
+      // El correo se envía desde la app del dispositivo después de revisar el borrador.
+      await Linking.openURL(construirSolicitudRenovacion(detalle, correoTi));
+      setRenovacionEstado('preparada');
     } catch {
       setRenovacionEstado('error');
     }
@@ -281,12 +281,12 @@ export const LicenciaDetalleScreen: React.FC<LicenciaDetalleScreenProps> = ({
       <Modal visible={renovacionVisible} transparent animationType="fade" onRequestClose={() => setRenovacionVisible(false)}>
         <View style={styles.modalFondo}>
           <View style={styles.modalCaja}>
-            {renovacionEstado === 'enviada' ? (
+            {renovacionEstado === 'preparada' ? (
               <>
                 <Text style={[styles.titulo, t.bold]}>Solicitud preparada</Text>
                 <Text style={[styles.sub, t.regular, { marginTop: 8 }]}>
                   Se abrió tu aplicación de correo con la solicitud de renovación de {detalle.software} dirigida a{' '}
-                  {CORREO_SOPORTE_TI}. Envíala para completar el trámite.
+                  {correoTi}. Envíala para completar el trámite.
                 </Text>
                 <TouchableOpacity
                   style={[ui.botonPrimario, { marginTop: 20 }]}
@@ -299,25 +299,32 @@ export const LicenciaDetalleScreen: React.FC<LicenciaDetalleScreenProps> = ({
             ) : (
               <>
                 <Text style={[styles.titulo, t.bold]}>Solicitar renovación</Text>
-                <Text style={[styles.sub, t.regular, { marginTop: 8 }]}>
-                  Se enviará a TI ({CORREO_SOPORTE_TI}) la solicitud para renovar {detalle.software} ·{' '}
-                  {detalle.codigoLicencia}, que {detalle.estado === 'vencida' ? 'venció' : 'vence'} el{' '}
-                  {formatearFecha(detalle.finVigencia)}. La renovación crea un nuevo periodo de vigencia.
-                </Text>
+                {correoTi ? (
+                  <Text style={[styles.sub, t.regular, { marginTop: 8 }]}>
+                    Abre tu aplicación de correo para revisar y enviar a TI ({correoTi}) la solicitud de{' '}
+                    {detalle.software} · {detalle.codigoLicencia}.
+                  </Text>
+                ) : (
+                  <Text style={[styles.sub, t.regular, { marginTop: 8 }]}>
+                    El correo de soporte de TI aún no está configurado.
+                  </Text>
+                )}
                 {renovacionEstado === 'error' ? (
                   <View style={[ui.errorCaja, { marginTop: 12 }]}>
                     <Text style={ui.errorTexto}>
-                      No se pudo abrir la aplicación de correo. Escribe a {CORREO_SOPORTE_TI}.
+                      No se pudo abrir la aplicación de correo. Escribe a {correoTi}.
                     </Text>
                   </View>
                 ) : null}
-                <TouchableOpacity
-                  style={[ui.botonPrimario, { marginTop: 20 }]}
-                  onPress={() => void solicitarRenovacion()}
-                  accessibilityRole="button"
-                >
-                  <Text style={[ui.botonPrimarioTexto, t.bold]}>Enviar solicitud</Text>
-                </TouchableOpacity>
+                {correoTi && (
+                  <TouchableOpacity
+                    style={[ui.botonPrimario, { marginTop: 20 }]}
+                    onPress={() => void solicitarRenovacion()}
+                    accessibilityRole="button"
+                  >
+                    <Text style={[ui.botonPrimarioTexto, t.bold]}>Abrir correo</Text>
+                  </TouchableOpacity>
+                )}
                 <TouchableOpacity style={styles.renovar} onPress={() => setRenovacionVisible(false)} accessibilityRole="button">
                   <Text style={[styles.renovarTexto, t.semibold]}>Cancelar</Text>
                 </TouchableOpacity>
