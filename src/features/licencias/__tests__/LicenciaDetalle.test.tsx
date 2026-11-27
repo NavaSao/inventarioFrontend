@@ -7,6 +7,8 @@ import { EmpleadosAsignadosScreen } from '../views/EmpleadosAsignadosScreen';
 import { LicenciasService } from '../services/LicenciasService';
 import { FakeBackend, MockStorage } from '../../asignaciones/__tests__/fakeBackend';
 
+const correoTi = 'soporte@assetops.test';
+
 function crear() {
   const backend = new FakeBackend();
   const service = new LicenciasService(backend, new MockStorage(), 'http://localhost');
@@ -62,28 +64,50 @@ describe('Detalle de licencia (HU05 · Escenario 05.03)', () => {
 
   test('«Solicitar renovación» confirma y abre el correo a TI con los datos de la licencia', async () => {
     const { service } = crear();
+    jest.replaceProperty(process, 'env', {
+      ...process.env,
+      EXPO_PUBLIC_TI_EMAIL: ` ${correoTi} `,
+      EXPO_PUBLIC_CORREO_TI: 'otro@assetops.test',
+    });
     const openURL = jest.spyOn(Linking, 'openURL').mockResolvedValue(true as never);
     render(<LicenciaDetalleScreen licenciasService={service} idLicencia="lic-figma" />);
 
     fireEvent.click(await screen.findByText('Solicitar renovación'));
-    expect(await screen.findByText('Enviar solicitud')).toBeTruthy();
-    fireEvent.click(screen.getByText('Enviar solicitud'));
+    fireEvent.click(await screen.findByText('Abrir correo'));
 
     await waitFor(() => expect(openURL).toHaveBeenCalledTimes(1));
     const url = String(openURL.mock.calls[0]![0]);
-    expect(url.startsWith('mailto:')).toBe(true);
+    expect(url.startsWith(`mailto:${correoTi}?`)).toBe(true);
     expect(decodeURIComponent(url)).toContain('FIG-ORG-2026');
     expect(await screen.findByText('Solicitud preparada')).toBeTruthy();
   });
 
   test('«Solicitar renovación» informa si no se puede abrir el correo', async () => {
     const { service } = crear();
+    jest.replaceProperty(process, 'env', { ...process.env, EXPO_PUBLIC_TI_EMAIL: correoTi });
     jest.spyOn(Linking, 'openURL').mockRejectedValue(new Error('sin app') as never);
     render(<LicenciaDetalleScreen licenciasService={service} idLicencia="lic-figma" />);
 
     fireEvent.click(await screen.findByText('Solicitar renovación'));
-    fireEvent.click(await screen.findByText('Enviar solicitud'));
+    fireEvent.click(await screen.findByText('Abrir correo'));
     expect(await screen.findByText(/No se pudo abrir la aplicación de correo/)).toBeTruthy();
+  });
+
+  test('«Solicitar renovación» avisa cuando falta el correo de soporte', async () => {
+    const { service } = crear();
+    jest.replaceProperty(process, 'env', {
+      ...process.env,
+      EXPO_PUBLIC_TI_EMAIL: '',
+      EXPO_PUBLIC_CORREO_TI: '',
+    });
+    const openURL = jest.spyOn(Linking, 'openURL');
+    render(<LicenciaDetalleScreen licenciasService={service} idLicencia="lic-figma" />);
+
+    fireEvent.click(await screen.findByText('Solicitar renovación'));
+
+    expect(await screen.findByText('El correo de soporte de TI aún no está configurado.')).toBeTruthy();
+    expect(screen.queryByText('Abrir correo')).toBeNull();
+    expect(openURL).not.toHaveBeenCalled();
   });
 
   test('Una licencia vencida bloquea «Asignar licencia» e indica la causa', async () => {
