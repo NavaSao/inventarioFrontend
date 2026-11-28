@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
   ActivityIndicator,
   Modal,
@@ -15,8 +15,10 @@ import { useFonts } from 'expo-font';
 import { Inter_400Regular } from '@expo-google-fonts/inter/400Regular';
 import { Inter_600SemiBold } from '@expo-google-fonts/inter/600SemiBold';
 import { Inter_700Bold } from '@expo-google-fonts/inter/700Bold';
-import { DashboardData } from '../models/types';
-import { DashboardService, DASHBOARD_VACIO } from '../services/DashboardService';
+import { AlertaVencimiento, IDashboardAlertsReadRepository } from '../models/types';
+import { DashboardService } from '../services/DashboardService';
+import { useDashboardAlertsViewModel } from '../viewmodels/useDashboardAlertsViewModel';
+import { useDashboardResumenViewModel } from '../viewmodels/useDashboardResumenViewModel';
 import { LicenciasService } from '../../licencias/services/LicenciasService';
 import { Licencia } from '../../licencias/models/types';
 import {
@@ -35,6 +37,7 @@ import {
 
 export interface DashboardScreenProps {
   readonly dashboardService?: DashboardService;
+  readonly alertsRepository?: IDashboardAlertsReadRepository;
   readonly licenciasService?: LicenciasService;
   readonly nombreUsuario?: string;
   readonly onNavegarLicencias?: () => void;
@@ -71,52 +74,47 @@ const fuentes = { Inter_400Regular, Inter_600SemiBold, Inter_700Bold };
 
 export const DashboardScreen: React.FC<DashboardScreenProps> = ({
   dashboardService,
+  alertsRepository,
   licenciasService,
   nombreUsuario,
   onNavegarLicencias,
   onRevisarLicencia,
 }) => {
   const [fuentesListas] = useFonts(fuentes);
-  const [estadoCarga, setEstadoCarga] = useState<'cargando' | 'error_conexion' | 'exito'>('cargando');
-  const [errorMensaje, setErrorMensaje] = useState<string | null>(null);
-  const [refrescando, setRefrescando] = useState(false);
-  const [datos, setDatos] = useState<DashboardData>(DASHBOARD_VACIO);
-  const [licencias, setLicencias] = useState<Licencia[]>([]);
   const [modalActividadVisible, setModalActividadVisible] = useState(false);
   const [errorDescartado, setErrorDescartado] = useState(false);
 
-  const cargarDatos = async () => {
-    if (!dashboardService) {
-      setEstadoCarga('exito');
-      return;
-    }
-    setEstadoCarga('cargando');
-    setErrorMensaje(null);
-    setErrorDescartado(false);
+  const resumenVm = useDashboardResumenViewModel(dashboardService, licenciasService);
+  const alertsVm = useDashboardAlertsViewModel({
+    alertsRepository: alertsRepository ?? dashboardService,
+    onNavigateToLicense: (licenciaId, software) => {
+      if (onRevisarLicencia) {
+        onRevisarLicencia(licenciaId, software);
+      } else if (onNavegarLicencias) {
+        onNavegarLicencias();
+      }
+    },
+  });
 
-    try {
-      const [data, licenciasReales] = await Promise.all([
-        dashboardService.obtenerDashboard(),
-        licenciasService ? licenciasService.obtenerLicencias().catch(() => []) : Promise.resolve([]),
-      ]);
-      setDatos(data);
-      setLicencias(licenciasReales);
-      setEstadoCarga('exito');
-    } catch (err: any) {
-      setErrorMensaje(err.message || 'No se pudo contactar al servidor.');
-      setEstadoCarga('error_conexion');
-    } finally {
-      setRefrescando(false);
-    }
+  const estadoCarga =
+    alertsVm.errorConexion || resumenVm.estadoCarga === 'error_conexion'
+      ? 'error_conexion'
+      : alertsVm.cargando || resumenVm.estadoCarga === 'cargando'
+      ? 'cargando'
+      : 'exito';
+  const errorMensaje = alertsVm.errorMensaje || resumenVm.errorMensaje;
+  const refrescando = alertsVm.refrescando || resumenVm.refrescando;
+
+  const handleRetry = () => {
+    setErrorDescartado(false);
+    void alertsVm.onRetry();
+    void resumenVm.recargar();
   };
 
-  useEffect(() => {
-    cargarDatos();
-  }, [dashboardService, licenciasService]);
-
   const onRefresh = () => {
-    setRefrescando(true);
-    cargarDatos();
+    setErrorDescartado(false);
+    void alertsVm.onRefresh();
+    void resumenVm.refrescar();
   };
 
   const regular = fuentesListas ? styles.interRegular : undefined;
@@ -139,7 +137,9 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
     ? `Hola, ${nombreUsuario.split(' ')[0]}`
     : 'Hola, administradora';
 
-  const { metricas, vencimientosMenos30Dias, actividadReciente } = datos;
+  const { metricas, actividadReciente } = resumenVm.datos;
+  const vencimientosMenos30Dias: AlertaVencimiento[] = alertsVm.alertas;
+  const licencias = resumenVm.licencias;
   const hayDiferenciaCupos = metricas.cuposLibres > metricas.cuposAsignables;
 
   // Datos reales para el gráfico de barras verticales de ocupación
@@ -248,7 +248,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
 
               <TouchableOpacity
                 style={styles.retryButton}
-                onPress={cargarDatos}
+                onPress={handleRetry}
                 activeOpacity={0.85}
                 accessibilityRole="button"
                 testID="boton-reintentar"
@@ -433,13 +433,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                       {alerta.cupos} puestos · Renueva antes del {alerta.finVigencia}
                     </Text>
                     <TouchableOpacity
-                      onPress={() => {
-                        if (onRevisarLicencia) {
-                          onRevisarLicencia(alerta.licenciaId || String(alerta.id), alerta.software);
-                        } else if (onNavegarLicencias) {
-                          onNavegarLicencias();
-                        }
-                      }}
+                      onPress={() => alertsVm.onReviewLicense(alerta)}
                       activeOpacity={0.85}
                       style={styles.alertaBoton}
                       accessibilityRole="button"
