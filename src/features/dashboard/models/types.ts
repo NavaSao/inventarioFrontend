@@ -30,3 +30,19 @@ export interface DashboardData {
   readonly vencimientosMenos30Dias: AlertaVencimiento[];
   readonly actividadReciente: ActividadReciente[];
 }
+
+export type EstadoCargaDashboard = 'cargando' | 'error_conexion' | 'exito';
+
+export interface DashboardAlertsState {
+  readonly estadoCarga: EstadoCargaDashboard;
+  readonly alertas: AlertaVencimiento[];
+  readonly errorMensaje: string | null;
+  readonly refrescando: boolean;
+}
+
+/**
+ * Contrato segregado de solo lectura para alertas del dashboard (ISP / DIP).
+ */
+export interface IDashboardAlertsReadRepository {
+  obtenerAlertasVencimiento(): Promise<AlertaVencimiento[]>;
+}

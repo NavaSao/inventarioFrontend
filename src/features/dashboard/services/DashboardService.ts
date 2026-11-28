@@ -1,6 +1,11 @@
-import { IHttpClient } from '../../../core/network/IHttpClient';
+import { IHttpClient, NetworkError } from '../../../core/network/IHttpClient';
 import { ISecureStorage } from '../../../core/storage/ISecureStorage';
-import { AlertaVencimiento, ActividadReciente, DashboardData } from '../models/types';
+import {
+  AlertaVencimiento,
+  ActividadReciente,
+  DashboardData,
+  IDashboardAlertsReadRepository,
+} from '../models/types';
 
 export const DASHBOARD_VACIO: DashboardData = {
   metricas: {
@@ -15,27 +20,72 @@ export const DASHBOARD_VACIO: DashboardData = {
   actividadReciente: [],
 };
 
-export class DashboardService {
+function normalizarAlertaVencimiento(item: any): AlertaVencimiento {
+  const idLicencia = String(item?.idLicencia || item?.licenciaId || item?.idContrato || item?.id || '');
+  return {
+    id: idLicencia,
+    software: String(item?.software || 'Software'),
+    diasRestantes: Number(item?.diasParaVencer ?? item?.diasRestantes ?? 0),
+    cupos: Number(item?.cuposContratados ?? item?.cupos ?? item?.cuposTotales ?? 0),
+    finVigencia: String(item?.finVigencia || ''),
+    licenciaId: idLicencia,
+  };
+}
+
+export class DashboardService implements IDashboardAlertsReadRepository {
+  private consultaEnCurso: Promise<DashboardData> | null = null;
+
   constructor(
     private readonly httpClient: IHttpClient,
     private readonly secureStorage: ISecureStorage,
     private readonly baseUrl: string
   ) {}
 
+  async obtenerAlertasVencimiento(): Promise<AlertaVencimiento[]> {
+    const dashboard = await this.obtenerDashboard();
+    return dashboard.vencimientosMenos30Dias;
+  }
+
   async obtenerDashboard(): Promise<DashboardData> {
+    if (this.consultaEnCurso) {
+      return this.consultaEnCurso;
+    }
+
+    this.consultaEnCurso = this.consultarDashboardRemoto().finally(() => {
+      this.consultaEnCurso = null;
+    });
+
+    return this.consultaEnCurso;
+  }
+
+  private async consultarDashboardRemoto(): Promise<DashboardData> {
     const token = await this.secureStorage.obtenerToken();
     const headers: Record<string, string> = {};
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    const response = await this.httpClient.get<any>(
-      `${this.baseUrl}/api/dashboard`,
-      headers
-    );
+    let response;
+    try {
+      response = await this.httpClient.get<any>(
+        `${this.baseUrl}/api/dashboard`,
+        headers
+      );
+    } catch (error: unknown) {
+      if (error instanceof NetworkError) {
+        throw error;
+      }
+      const message =
+        error instanceof Error && error.message.trim().length > 0
+          ? error.message
+          : 'Fallo de conexión. Reintentar';
+      throw new NetworkError(message);
+    }
 
     if (!response.ok || !response.data) {
-      throw new Error(response.data?.mensaje || 'Error al obtener datos del dashboard');
+      throw new Error(
+        response.data?.message || response.data?.mensaje || 'Error al obtener datos del dashboard'
+      );
     }
 
     const raw = response.data.data || response.data;
@@ -52,16 +102,9 @@ export class DashboardService {
 
     let vencimientos: AlertaVencimiento[] = [];
     if (Array.isArray(raw.vencimientosMenos30Dias)) {
-      vencimientos = raw.vencimientosMenos30Dias;
+      vencimientos = raw.vencimientosMenos30Dias.map(normalizarAlertaVencimiento);
     } else if (Array.isArray(raw.alertas?.vencimientosMenos30Dias?.contratos)) {
-      vencimientos = raw.alertas.vencimientosMenos30Dias.contratos.map((c: any) => ({
-        id: String(c.idContrato || c.idLicencia || c.id || ''),
-        software: String(c.software || 'Software'),
-        diasRestantes: Number(c.diasParaVencer ?? c.diasRestantes ?? 0),
-        cupos: Number(c.cuposContratados ?? c.cupos ?? c.cuposTotales ?? 0),
-        finVigencia: String(c.finVigencia || ''),
-        licenciaId: String(c.idLicencia || c.idContrato || ''),
-      }));
+      vencimientos = raw.alertas.vencimientosMenos30Dias.contratos.map(normalizarAlertaVencimiento);
     }
 
     let actividad: ActividadReciente[] = [];
